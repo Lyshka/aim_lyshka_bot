@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-display: "Outfit", system-ui, sans-serif;
+}
+
+:root {
+  --tg-bg: var(--tg-theme-bg-color, #f4f6f8);
+  --tg-text: var(--tg-theme-text-color, #101820);
+  --tg-hint: var(--tg-theme-hint-color, #6b7785);
+  --tg-link: var(--tg-theme-link-color, #1f6f5b);
+  --tg-button: var(--tg-theme-button-color, #1f6f5b);
+  --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --tg-secondary: var(--tg-theme-secondary-bg-color, #e8eef3);
+  --tg-section: var(--tg-theme-section-bg-color, #ffffff);
+  --tg-header: var(--tg-theme-header-bg-color, #f4f6f8);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--tg-text);
+  background: var(--tg-bg);
+  overscroll-behavior: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.date-native-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.011;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  color-scheme: light;
+}
+
+.date-native-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}

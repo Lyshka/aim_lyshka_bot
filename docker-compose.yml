@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lyshka-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lyshka
+      POSTGRES_PASSWORD: lyshka
+      POSTGRES_DB: lyshka
+    volumes:
+      - lyshka_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lyshka -d lyshka"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lyshka-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://lyshka:lyshka@db:5432/lyshka?schema=public
+      WEBAPP_URL: ""
+      WEBAPP_URL_FILE: /shared/webapp_url
+      CORS_ORIGIN: "*"
+      ALLOW_DEV_AUTH: "false"
+    volumes:
+      - webapp_shared:/shared
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lyshka-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  tunnel:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.tunnel
+    container_name: lyshka-tunnel
+    restart: unless-stopped
+    environment:
+      TUNNEL_TARGET: http://frontend:80
+      WEBAPP_URL_FILE: /shared/webapp_url
+    volumes:
+      - webapp_shared:/shared
+    depends_on:
+      - frontend
+
+volumes:
+  lyshka_pg:
+  webapp_shared:

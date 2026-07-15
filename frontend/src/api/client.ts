@@ -1,0 +1,170 @@
+export type AppUser = {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  languageCode?: string;
+  photoUrl?: string;
+  isPremium?: boolean;
+};
+
+export type AuthResponse = {
+  user: AppUser;
+  mode: 'telegram' | 'dev';
+};
+
+export type Medication = {
+  id: string;
+  name: string;
+  tabletsCount: number;
+  mgPerTablet: number;
+  totalMg: number;
+  intervalDays: number;
+  instructions: string;
+  active: boolean;
+  nextDueAt: string;
+  lastTakenAt: string | null;
+  sortOrder: number;
+  isDue: boolean;
+  daysUntilDue: number;
+};
+
+export type Intake = {
+  id: string;
+  medicationId: string;
+  medicationName?: string;
+  takenAt: string;
+  tabletsCount: number;
+  mgPerTablet: number;
+  totalMg: number;
+  note: string | null;
+  deletedAt: string | null;
+  isDeleted: boolean;
+};
+
+export type Overview = {
+  medications: Medication[];
+  dueCount: number;
+  settings: {
+    reminderHour: number;
+    reminderMinute: number;
+    timezone: string;
+    defaultInterval: number;
+  } | null;
+  recentIntakes: Intake[];
+};
+
+export type HistoryFilter = {
+  from?: string;
+  to?: string;
+  medicationId?: string;
+  includeDeleted?: boolean;
+  onlyDeleted?: boolean;
+};
+
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {}),
+    },
+    ...init,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Ошибка ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  auth: (initData: string) =>
+    request<AuthResponse>('/api/auth/telegram', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  overview: (initData: string) =>
+    request<Overview>('/api/meds/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  take: (initData: string, id: string) =>
+    request<{ intake: Intake; medications: Medication[] }>(
+      `/api/meds/${id}/take`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ initData }),
+      },
+    ),
+  history: (initData: string, filter?: HistoryFilter) =>
+    request<Intake[]>('/api/meds/history', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...filter }),
+    }),
+  deleteIntake: (initData: string, id: string) =>
+    request<Intake>(`/api/meds/history/${id}/delete`, {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  restoreIntake: (initData: string, id: string) =>
+    request<Intake>(`/api/meds/history/${id}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  clearHistory: (initData: string, filter: { from?: string; to?: string }) =>
+    request<{ ok: boolean; deleted: number }>('/api/meds/history/clear', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...filter }),
+    }),
+  purgeDeleted: (initData: string) =>
+    request<{ ok: boolean; deleted: number }>('/api/meds/history/purge-deleted', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  createMed: (
+    initData: string,
+    data: {
+      name: string;
+      tabletsCount: number;
+      mgPerTablet: number;
+      intervalDays?: number;
+      instructions?: string;
+    },
+  ) =>
+    request<Medication>('/api/meds', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  updateMed: (
+    initData: string,
+    id: string,
+    data: Partial<{
+      name: string;
+      tabletsCount: number;
+      mgPerTablet: number;
+      intervalDays: number;
+      instructions: string;
+      active: boolean;
+    }>,
+  ) =>
+    request<Medication>(`/api/meds/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  updateSettings: (
+    initData: string,
+    data: Partial<{
+      reminderHour: number;
+      reminderMinute: number;
+      defaultInterval: number;
+    }>,
+  ) =>
+    request<Overview['settings']>('/api/meds/settings', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+};

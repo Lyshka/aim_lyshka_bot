@@ -1,0 +1,73 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           BigInt            @id
+  username     String?
+  firstName    String?
+  lastName     String?
+  languageCode String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  medications  Medication[]
+  intakes      MedicationIntake[]
+  settings     UserSettings?
+}
+
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          BigInt   @unique
+  reminderHour    Int      @default(9)
+  reminderMinute  Int      @default(0)
+  timezone        String   @default("Europe/Moscow")
+  defaultInterval Int      @default(2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Medication {
+  id           String             @id @default(cuid())
+  userId       BigInt
+  name         String
+  tabletsCount Float
+  mgPerTablet  Float
+  intervalDays Int                @default(2)
+  instructions String             @default("")
+  active       Boolean            @default(true)
+  nextDueAt    DateTime
+  lastTakenAt  DateTime?
+  sortOrder    Int                @default(0)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intakes      MedicationIntake[]
+
+  @@index([userId, active])
+  @@index([nextDueAt])
+}
+
+model MedicationIntake {
+  id           String     @id @default(cuid())
+  userId       BigInt
+  medicationId String
+  takenAt      DateTime   @default(now())
+  tabletsCount Float
+  mgPerTablet  Float
+  totalMg      Float
+  note         String?
+  deletedAt    DateTime?
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+  @@index([medicationId, takenAt])
+  @@index([userId, deletedAt])
+}
