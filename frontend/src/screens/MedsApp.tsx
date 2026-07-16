@@ -16,27 +16,26 @@ export function MedsApp({ onBack }: MedsAppProps) {
   const [tab, setTab] = useState<Tab>('home');
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => {
-          haptic('light');
-          onBack();
-        }}
-        className="fixed top-3 left-4 z-20 rounded-xl px-3 py-1.5 text-xs font-medium"
-        style={{
-          background: 'color-mix(in srgb, var(--tg-hint) 16%, transparent)',
-          top: 'calc(10px + var(--safe-top, 0px))',
-        }}
-      >
-        Назад
-      </button>
+    <div className="mx-auto w-full max-w-md">
+      <div className="px-4 pt-4">
+        <button
+          type="button"
+          onClick={() => {
+            haptic('light');
+            onBack();
+          }}
+          className="rounded-xl px-3 py-2 text-sm font-medium"
+          style={{
+            background: 'color-mix(in srgb, var(--tg-hint) 16%, transparent)',
+          }}
+        >
+          ← К приложениям
+        </button>
+      </div>
       <Shell tab={tab} onTabChange={setTab}>
-        <div className="pt-8">
-          {tab === 'home' ? <HomeScreen /> : null}
-          {tab === 'history' ? <HistoryScreen /> : null}
-          {tab === 'settings' ? <SettingsScreen /> : null}
-        </div>
+        {tab === 'home' ? <HomeScreen /> : null}
+        {tab === 'history' ? <HistoryScreen /> : null}
+        {tab === 'settings' ? <SettingsScreen /> : null}
       </Shell>
     </div>
   );

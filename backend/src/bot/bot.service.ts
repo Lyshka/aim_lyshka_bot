@@ -31,15 +31,22 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const fromFile = this.readUrlFromFile();
     if (fromFile) {
       this.cachedUrl = fromFile.replace(/\/$/, '');
-      return this.cachedUrl;
+      return this.withCacheBust(this.cachedUrl);
     }
 
     const fromEnv = this.configService.get<string>('WEBAPP_URL')?.trim();
     if (!fromEnv) {
-      return this.cachedUrl;
+      return this.cachedUrl ? this.withCacheBust(this.cachedUrl) : null;
     }
     this.cachedUrl = fromEnv.replace(/\/$/, '');
-    return this.cachedUrl;
+    return this.withCacheBust(this.cachedUrl);
+  }
+
+  private withCacheBust(url: string): string {
+    const version =
+      this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '2';
+    const base = url.split('?')[0].replace(/\/$/, '');
+    return `${base}/?v=${version}`;
   }
 
   getAdminIds(): number[] {
@@ -56,7 +63,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async applyMenuButton(url?: string | null) {
-    const target = (url ?? this.getWebAppUrl())?.replace(/\/$/, '');
+    const target = url ?? this.getWebAppUrl();
     if (!target) {
       return;
     }
@@ -68,7 +75,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
           web_app: { url: target },
         },
       });
-      this.cachedUrl = target;
     } catch {
       return;
     }
@@ -84,9 +90,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   private async syncWebAppUrl() {
     const previous = this.cachedUrl;
-    const next = this.getWebAppUrl();
-    if (next && next !== previous) {
-      await this.applyMenuButton(next);
+    const fromFile = this.readUrlFromFile();
+    const fromEnv = this.configService.get<string>('WEBAPP_URL')?.trim();
+    const nextRaw = (fromFile || fromEnv || '')?.replace(/\/$/, '') || null;
+    if (nextRaw && nextRaw !== previous) {
+      this.cachedUrl = nextRaw;
+      await this.applyMenuButton();
     }
   }
 

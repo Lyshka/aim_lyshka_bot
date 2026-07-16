@@ -18,10 +18,10 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
           lyshka-service
         </p>
         <h1 className="font-display mt-3 text-3xl font-semibold tracking-tight">
-          Привет, {user?.firstName ?? 'друг'}
+          Приложения
         </h1>
         <p className="mt-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
-          Выбери приложение
+          Привет, {user?.firstName ?? 'друг'} — выбери, куда зайти
         </p>
       </header>
 
