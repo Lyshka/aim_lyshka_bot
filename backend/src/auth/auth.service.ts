@@ -66,6 +66,7 @@ export class AuthService {
 
     if (isAdmin) {
       await this.appsService.setGrant(userId, 'meds', true).catch(() => undefined);
+      await this.appsService.setGrant(userId, 'cats', true).catch(() => undefined);
     }
 
     const apps = await this.appsService.listForUser(userId);

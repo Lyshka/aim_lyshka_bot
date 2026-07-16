@@ -101,3 +101,16 @@ model MedicationIntake {
   @@index([medicationId, takenAt])
   @@index([userId, deletedAt])
 }
+
+model CatPost {
+  id           String    @id @default(cuid())
+  deliveryDate String    @unique
+  imageUrl     String
+  imageKey     String    @unique
+  text         String
+  textKey      String    @unique
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([createdAt])
+}

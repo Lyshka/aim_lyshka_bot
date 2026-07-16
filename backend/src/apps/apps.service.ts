@@ -18,6 +18,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'cats',
+    name: 'Котики',
+    description: 'Милый котик и тёплый текст каждый день',
+    icon: 'cats',
+    color: '#ea580c',
+    sortOrder: 20,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

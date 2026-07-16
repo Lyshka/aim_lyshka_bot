@@ -54,6 +54,27 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
+  if (slug === 'cats') {
+    return (
+      <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+        <path
+          d="M12 20c0-6 4.5-10 12-10s12 4 12 10v8c0 6-5 11-12 11S12 34 12 28v-8Z"
+          fill="currentColor"
+        />
+        <path d="M14 14 10 6l8 5" fill="currentColor" />
+        <path d="M34 14 38 6l-8 5" fill="currentColor" />
+        <circle cx="19" cy="22" r="2" fill="#fff" />
+        <circle cx="29" cy="22" r="2" fill="#fff" />
+        <path
+          d="M22 28h4"
+          stroke="#fff"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
       <rect x="10" y="10" width="28" height="28" rx="8" fill="currentColor" />
@@ -80,6 +101,13 @@ export function appAccent(slug: string, fallback: string) {
       from: '#64748b',
       to: '#1e293b',
       glow: 'rgba(30, 41, 59, 0.4)',
+    };
+  }
+  if (slug === 'cats') {
+    return {
+      from: '#fb923c',
+      to: '#c2410c',
+      glow: 'rgba(234, 88, 12, 0.4)',
     };
   }
   return {

@@ -112,6 +112,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type CatPost = {
+  id: string;
+  deliveryDate: string;
+  imageUrl: string;
+  text: string;
+  createdAt: string;
+  sentAt: string | null;
+};
+
+export type CatFeed = {
+  today: CatPost;
+  history: CatPost[];
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -130,6 +144,11 @@ export const api = {
     request<AdminOverview>('/api/admin/grants', {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
+    }),
+  catsFeed: (initData: string) =>
+    request<CatFeed>('/api/cats/feed', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

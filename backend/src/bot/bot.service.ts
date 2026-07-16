@@ -44,7 +44,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   private withCacheBust(url: string): string {
     const version =
-      this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '3';
+      this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '4';
     const base = url.split('?')[0].replace(/\/$/, '');
     return `${base}/?v=${version}`;
   }
@@ -115,5 +115,17 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     extra?: Parameters<Telegraf['telegram']['sendMessage']>[2],
   ) {
     return this.bot.telegram.sendMessage(chatId, text, extra);
+  }
+
+  async sendPhoto(
+    chatId: number,
+    photo: string,
+    caption?: string,
+    extra?: Parameters<Telegraf['telegram']['sendPhoto']>[2],
+  ) {
+    return this.bot.telegram.sendPhoto(chatId, photo, {
+      caption,
+      ...extra,
+    });
   }
 }
