@@ -27,6 +27,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'health',
+    name: 'Здоровье',
+    description: 'Шаги и вес из Health / ОКОК',
+    icon: 'health',
+    color: '#2563eb',
+    sortOrder: 30,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

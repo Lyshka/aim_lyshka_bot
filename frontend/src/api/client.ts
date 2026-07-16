@@ -126,6 +126,31 @@ export type CatFeed = {
   history: CatPost[];
 };
 
+export type HealthDay = {
+  id: string;
+  day: string;
+  steps: number | null;
+  weightKg: number | null;
+  bodyFatPercent: number | null;
+  muscleMassKg: number | null;
+  waterPercent: number | null;
+  boneMassKg: number | null;
+  bmi: number | null;
+  source: string;
+  updatedAt: string;
+};
+
+export type HealthOverview = {
+  today: HealthDay | null;
+  history: HealthDay[];
+  ingestConfigured: boolean;
+  stats: {
+    daysTracked: number;
+    lastWeightKg: number | null;
+    lastSteps: number | null;
+  };
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -149,6 +174,19 @@ export const api = {
     request<CatFeed>('/api/cats/feed', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  healthOverview: (initData: string) =>
+    request<HealthOverview>('/api/health/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  healthManual: (
+    initData: string,
+    data: { day?: string; steps?: number; weightKg?: number; bodyFatPercent?: number },
+  ) =>
+    request<HealthDay>('/api/health/manual', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { PlatformApp } from './api/client';
 import { AdminScreen } from './screens/AdminScreen';
 import { CatsApp } from './screens/CatsApp';
+import { HealthApp } from './screens/HealthApp';
 import { LauncherScreen } from './screens/LauncherScreen';
 import { MedsApp } from './screens/MedsApp';
 import { TelegramProvider, useTelegram } from './telegram/TelegramProvider';
@@ -48,6 +49,10 @@ function AppContent() {
 
   if (activeApp?.slug === 'cats') {
     return <CatsApp onBack={() => setActiveApp(null)} />;
+  }
+
+  if (activeApp?.slug === 'health') {
+    return <HealthApp onBack={() => setActiveApp(null)} />;
   }
 
   return <LauncherScreen onOpen={setActiveApp} />;
