@@ -19,6 +19,35 @@ model User {
   medications  Medication[]
   intakes      MedicationIntake[]
   settings     UserSettings?
+  appGrants    UserAppGrant[]
+}
+
+model App {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  name        String
+  description String         @default("")
+  icon        String         @default("APP")
+  color       String         @default("#1f6f5b")
+  sortOrder   Int            @default(0)
+  isSystem    Boolean        @default(false)
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  grants      UserAppGrant[]
+}
+
+model UserAppGrant {
+  id        String   @id @default(cuid())
+  userId    BigInt
+  appId     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, appId])
+  @@index([userId])
+  @@index([appId])
 }
 
 model UserSettings {

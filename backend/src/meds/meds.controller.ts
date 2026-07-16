@@ -25,7 +25,10 @@ export class MedsController {
   ) {}
 
   private async userId(initData?: string) {
-    const session = await this.authService.authenticate(initData ?? '');
+    const session = await this.authService.authenticateApp(
+      initData ?? '',
+      'meds',
+    );
     return session.user.id;
   }
 

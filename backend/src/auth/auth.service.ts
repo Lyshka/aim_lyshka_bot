@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AppsService } from '../apps/apps.service';
 import { UsersService } from '../users/users.service';
 import { validateTelegramInitData } from './telegram-init-data';
 
@@ -28,31 +29,11 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    private readonly appsService: AppsService,
   ) {}
 
-  getAllowedUserIds(): number[] {
-    const raw =
-      this.configService.get<string>('ALLOWED_USER_IDS') ||
-      this.configService.get<string>('ADMIN_IDS') ||
-      '';
-    return raw
-      .split(',')
-      .map((id) => Number(id.trim()))
-      .filter((id) => Number.isFinite(id) && id > 0);
-  }
-
-  isAllowed(userId: number): boolean {
-    const allowed = this.getAllowedUserIds();
-    if (allowed.length === 0) {
-      return false;
-    }
-    return allowed.includes(userId);
-  }
-
-  assertAllowed(userId: number) {
-    if (!this.isAllowed(userId)) {
-      throw new ForbiddenException('Доступ запрещён. Приложение только для владельца.');
-    }
+  isAdmin(userId: number): boolean {
+    return this.appsService.isAdmin(userId);
   }
 
   async authenticate(initData: string) {
@@ -72,8 +53,6 @@ export class AuthService {
       throw new ForbiddenException('Невалидные данные Telegram WebApp');
     }
 
-    this.assertAllowed(validated.user.id);
-
     const user = await this.usersService.upsertFromTelegram({
       id: validated.user.id,
       first_name: validated.user.first_name,
@@ -82,13 +61,31 @@ export class AuthService {
       language_code: validated.user.language_code,
     });
 
+    const userId = Number(user.id);
+    const isAdmin = this.appsService.isAdmin(userId);
+
+    if (isAdmin) {
+      await this.appsService.setGrant(userId, 'meds', true).catch(() => undefined);
+    }
+
+    const apps = await this.appsService.listForUser(userId);
+
     return {
       user: {
         ...serializeUser(user),
         photoUrl: validated.user.photo_url,
         isPremium: Boolean(validated.user.is_premium),
+        isAdmin,
       },
+      apps,
+      isAdmin,
       mode: 'telegram' as const,
     };
+  }
+
+  async authenticateApp(initData: string, appSlug: string) {
+    const session = await this.authenticate(initData);
+    await this.appsService.assertAccess(session.user.id, appSlug);
+    return session;
   }
 }

@@ -5,11 +5,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import { serializeIntake, serializeMedication } from './meds.serializer';
 
 @Injectable()
 export class MedsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async list(userId: number) {
     const meds = await this.prisma.medication.findMany({
@@ -20,6 +24,8 @@ export class MedsService {
   }
 
   async overview(userId: number) {
+    await this.usersService.ensureDefaultMedications(BigInt(userId));
+
     const [meds, settings, recentIntakes] = await Promise.all([
       this.list(userId),
       this.prisma.userSettings.findUnique({

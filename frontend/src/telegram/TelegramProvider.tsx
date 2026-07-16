@@ -7,14 +7,17 @@ import {
   type ReactNode,
 } from 'react';
 import WebApp from '@twa-dev/sdk';
-import { api, type AppUser } from '../api/client';
+import { api, type AppUser, type PlatformApp } from '../api/client';
 
 type TelegramContextValue = {
   ready: boolean;
   error: string | null;
   user: AppUser | null;
+  apps: PlatformApp[];
+  isAdmin: boolean;
   initData: string;
   isTelegram: boolean;
+  refreshSession: () => Promise<void>;
   haptic: (type?: 'light' | 'medium' | 'heavy') => void;
   close: () => void;
 };
@@ -38,6 +41,8 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [apps, setApps] = useState<PlatformApp[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [initData, setInitData] = useState('');
   const [isTelegram, setIsTelegram] = useState(false);
 
@@ -98,6 +103,8 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
           return;
         }
         setUser(session.user);
+        setApps(session.apps);
+        setIsAdmin(session.isAdmin);
         setError(null);
       } catch (err) {
         if (!alive) {
@@ -127,8 +134,16 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       ready,
       error,
       user,
+      apps,
+      isAdmin,
       initData,
       isTelegram,
+      refreshSession: async () => {
+        const session = await api.auth(initData);
+        setUser(session.user);
+        setApps(session.apps);
+        setIsAdmin(session.isAdmin);
+      },
       haptic: (type = 'light') => {
         WebApp.HapticFeedback?.impactOccurred(type);
       },
@@ -136,7 +151,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         WebApp.close();
       },
     }),
-    [ready, error, user, initData, isTelegram],
+    [ready, error, user, apps, isAdmin, initData, isTelegram],
   );
 
   return (

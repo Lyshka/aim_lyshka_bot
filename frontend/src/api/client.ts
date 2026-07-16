@@ -6,10 +6,24 @@ export type AppUser = {
   languageCode?: string;
   photoUrl?: string;
   isPremium?: boolean;
+  isAdmin?: boolean;
+};
+
+export type PlatformApp = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  isSystem: boolean;
 };
 
 export type AuthResponse = {
   user: AppUser;
+  apps: PlatformApp[];
+  isAdmin: boolean;
   mode: 'telegram' | 'dev';
 };
 
@@ -62,6 +76,21 @@ export type HistoryFilter = {
   onlyDeleted?: boolean;
 };
 
+export type AdminUser = {
+  id: number;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  isAdmin: boolean;
+  grants: { appId: string; slug: string; name: string }[];
+};
+
+export type AdminOverview = {
+  apps: PlatformApp[];
+  users: AdminUser[];
+};
+
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -86,6 +115,19 @@ export const api = {
     request<AuthResponse>('/api/auth/telegram', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  adminOverview: (initData: string) =>
+    request<AdminOverview>('/api/admin/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  setGrant: (
+    initData: string,
+    data: { userId: number; appSlug: string; enabled: boolean },
+  ) =>
+    request<AdminOverview>('/api/admin/grants', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

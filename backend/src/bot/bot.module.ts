@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TelegrafModule } from 'nestjs-telegraf';
-import { AuthModule } from '../auth/auth.module';
+import { AppsModule } from '../apps/apps.module';
 import { MedsModule } from '../meds/meds.module';
 import { UsersModule } from '../users/users.module';
 import { BotService } from './bot.service';
@@ -11,7 +11,7 @@ import { BotUpdate } from './bot.update';
   imports: [
     UsersModule,
     MedsModule,
-    AuthModule,
+    AppsModule,
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

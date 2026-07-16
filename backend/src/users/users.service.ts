@@ -64,7 +64,6 @@ export class UsersService {
       include: { settings: true },
     });
 
-    await this.ensureDefaultMedications(id);
     return user;
   }
 

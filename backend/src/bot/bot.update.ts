@@ -1,6 +1,6 @@
 import { Update, Start, Ctx, Command } from 'nestjs-telegraf';
 import { Context, Markup } from 'telegraf';
-import { AuthService } from '../auth/auth.service';
+import { AppsService } from '../apps/apps.service';
 import { MedsService } from '../meds/meds.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from './bot.service';
@@ -11,20 +11,12 @@ export class BotUpdate {
     private readonly usersService: UsersService,
     private readonly botService: BotService,
     private readonly medsService: MedsService,
-    private readonly authService: AuthService,
+    private readonly appsService: AppsService,
   ) {}
-
-  private isOwner(ctx: Context): boolean {
-    const id = ctx.from?.id;
-    return Boolean(id && this.authService.isAllowed(id));
-  }
 
   private async trackUser(ctx: Context) {
     const from = ctx.from;
     if (!from) {
-      return null;
-    }
-    if (!this.authService.isAllowed(from.id)) {
       return null;
     }
     return this.usersService.upsertFromTelegram(from);
@@ -32,18 +24,13 @@ export class BotUpdate {
 
   @Start()
   async onStart(@Ctx() ctx: Context) {
-    if (!this.isOwner(ctx)) {
-      await ctx.reply('Этот бот личный. Доступ закрыт.');
-      return;
-    }
-
     await this.trackUser(ctx);
     const name = ctx.from?.first_name ?? 'друг';
     const url = this.botService.getWebAppUrl();
 
     if (!url) {
       await ctx.reply(
-        `Привет, ${name}!\n\nЗадай WEBAPP_URL в backend/.env, чтобы открыть приложение.`,
+        `Привет, ${name}!\n\nСервис ещё запускается. Попробуй через минуту.`,
       );
       return;
     }
@@ -51,7 +38,7 @@ export class BotUpdate {
     await this.botService.applyMenuButton(url);
 
     await ctx.reply(
-      `Привет, ${name}!\n\nЭто lyshka-service.\nОткрой его кнопкой ниже.`,
+      `Привет, ${name}!\n\nЭто lyshka-service — платформа приложений.\nОткрой лаунчер кнопкой ниже.`,
       Markup.inlineKeyboard([
         Markup.button.webApp('Открыть lyshka-service', url),
       ]),
@@ -67,13 +54,19 @@ export class BotUpdate {
 
   @Command('due')
   async onDue(@Ctx() ctx: Context) {
-    if (!this.isOwner(ctx)) {
-      await ctx.reply('Этот бот личный. Доступ закрыт.');
+    const from = ctx.from;
+    if (!from) {
+      return;
+    }
+
+    const allowed = await this.appsService.hasAccess(from.id, 'meds');
+    if (!allowed) {
+      await ctx.reply('Нет доступа к lyshka-service.');
       return;
     }
 
     const user = await this.trackUser(ctx);
-    if (!user || !ctx.from) {
+    if (!user) {
       return;
     }
 
