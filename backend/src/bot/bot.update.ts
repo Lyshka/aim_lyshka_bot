@@ -48,16 +48,18 @@ export class BotUpdate {
       return;
     }
 
+    await this.botService.applyMenuButton(url);
+
     await ctx.reply(
-      `Привет, ${name}!\n\nЭто приложение-напоминание о таблетках.\nОткрой его кнопкой ниже.`,
+      `Привет, ${name}!\n\nЭто lyshka-service.\nОткрой его кнопкой ниже.`,
       Markup.inlineKeyboard([
-        Markup.button.webApp('Открыть приложение', url),
+        Markup.button.webApp('Открыть lyshka-service', url),
       ]),
     );
 
     await ctx.reply(
       'Кнопка также в меню бота.',
-      Markup.keyboard([Markup.button.webApp('Таблетки', url)])
+      Markup.keyboard([Markup.button.webApp('lyshka-service', url)])
         .resize()
         .persistent(),
     );
@@ -91,7 +93,7 @@ export class BotUpdate {
     await ctx.reply(['Сейчас нужно принять:', '', ...lines].join('\n'), {
       ...(url
         ? Markup.inlineKeyboard([
-            Markup.button.webApp('Отметить в приложении', url),
+            Markup.button.webApp('Открыть lyshka-service', url),
           ])
         : {}),
     });

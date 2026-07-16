@@ -91,7 +91,7 @@ export function HomeScreen() {
           className="font-display text-xs tracking-[0.2em] uppercase"
           style={{ color: 'var(--tg-button)' }}
         >
-          Напоминание
+          lyshka-service
         </p>
         <h1 className="font-display mt-3 text-3xl font-semibold tracking-tight">
           Привет, {user?.firstName ?? 'друг'}

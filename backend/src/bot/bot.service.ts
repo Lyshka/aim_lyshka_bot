@@ -55,25 +55,27 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     return admins.length === 0 || admins.includes(userId);
   }
 
-  private async applyMenuButton(url: string) {
+  async applyMenuButton(url?: string | null) {
+    const target = (url ?? this.getWebAppUrl())?.replace(/\/$/, '');
+    if (!target) {
+      return;
+    }
     try {
       await this.bot.telegram.setChatMenuButton({
         menuButton: {
           type: 'web_app',
-          text: 'Таблетки',
-          web_app: { url },
+          text: 'lyshka-service',
+          web_app: { url: target },
         },
       });
+      this.cachedUrl = target;
     } catch {
       return;
     }
   }
 
   async onModuleInit() {
-    const url = this.getWebAppUrl();
-    if (url) {
-      await this.applyMenuButton(url);
-    }
+    await this.applyMenuButton();
 
     this.timer = setInterval(() => {
       void this.syncWebAppUrl();
