@@ -65,3 +65,77 @@ textarea {
   opacity: 0;
   cursor: pointer;
 }
+
+.launcher {
+  background:
+    radial-gradient(120% 80% at 10% -10%, rgba(15, 118, 110, 0.16), transparent 55%),
+    radial-gradient(90% 70% at 100% 0%, rgba(14, 165, 233, 0.12), transparent 50%),
+    radial-gradient(80% 60% at 50% 100%, rgba(15, 23, 42, 0.06), transparent 55%),
+    var(--tg-bg);
+}
+
+.launcher-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.launcher-orb-a {
+  top: 12%;
+  right: -12%;
+  width: 180px;
+  height: 180px;
+  background: rgba(20, 184, 166, 0.22);
+  animation: launcher-float 9s ease-in-out infinite;
+}
+
+.launcher-orb-b {
+  bottom: 18%;
+  left: -16%;
+  width: 220px;
+  height: 220px;
+  background: rgba(56, 189, 248, 0.14);
+  animation: launcher-float 11s ease-in-out infinite reverse;
+}
+
+.launcher-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
+  pointer-events: none;
+}
+
+.launcher-tile {
+  animation: launcher-rise 0.45s ease both;
+}
+
+.launcher-icon {
+  transform: translateZ(0);
+}
+
+@keyframes launcher-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(14px);
+  }
+}
+
+@keyframes launcher-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

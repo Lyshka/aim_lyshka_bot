@@ -83,24 +83,31 @@ export function HomeScreen() {
 
   return (
     <div className="space-y-5">
-      <section
-        className="rounded-3xl px-5 py-6"
-        style={{ background: 'var(--tg-secondary)' }}
-      >
-        <p
-          className="font-display text-xs tracking-[0.2em] uppercase"
-          style={{ color: 'var(--tg-button)' }}
-        >
-          lyshka-service
-        </p>
-        <h1 className="font-display mt-3 text-3xl font-semibold tracking-tight">
-          Привет, {user?.firstName ?? 'друг'}
-        </h1>
-        <p className="mt-3 text-sm" style={{ color: 'var(--tg-hint)' }}>
-          {data.dueCount > 0
-            ? `Сейчас нужно принять: ${data.dueCount}`
-            : 'Сегодня всё принято по расписанию'}
-        </p>
+      <section className="relative overflow-hidden rounded-[28px] px-5 py-6">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, #0f766e 18%, var(--tg-secondary)), var(--tg-secondary))',
+          }}
+        />
+        <div className="absolute -top-8 -right-6 h-28 w-28 rounded-full bg-teal-500/15 blur-2xl" />
+        <div className="relative">
+          <p
+            className="font-display text-xs tracking-[0.2em] uppercase"
+            style={{ color: '#0f766e' }}
+          >
+            Таблетки
+          </p>
+          <h1 className="font-display mt-3 text-3xl font-semibold tracking-tight">
+            Привет, {user?.firstName ?? 'друг'}
+          </h1>
+          <p className="mt-3 text-sm" style={{ color: 'var(--tg-hint)' }}>
+            {data.dueCount > 0
+              ? `Сейчас нужно принять: ${data.dueCount}`
+              : 'Сегодня всё принято по расписанию'}
+          </p>
+        </div>
       </section>
 
       {due.length > 0 ? (

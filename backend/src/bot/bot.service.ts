@@ -44,7 +44,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   private withCacheBust(url: string): string {
     const version =
-      this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '2';
+      this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '3';
     const base = url.split('?')[0].replace(/\/$/, '');
     return `${base}/?v=${version}`;
   }
