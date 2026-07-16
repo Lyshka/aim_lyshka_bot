@@ -64,6 +64,8 @@ export type Overview = {
     reminderMinute: number;
     timezone: string;
     defaultInterval: number;
+    notificationsMutedUntil: string | null;
+    mutedToday: boolean;
   } | null;
   recentIntakes: Intake[];
 };
@@ -134,6 +136,22 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData }),
     }),
+  muteToday: (initData: string) =>
+    request<{ notificationsMutedUntil: string | null; mutedToday: boolean }>(
+      '/api/meds/mute-today',
+      {
+        method: 'POST',
+        body: JSON.stringify({ initData }),
+      },
+    ),
+  unmute: (initData: string) =>
+    request<{ notificationsMutedUntil: string | null; mutedToday: boolean }>(
+      '/api/meds/unmute',
+      {
+        method: 'POST',
+        body: JSON.stringify({ initData }),
+      },
+    ),
   take: (initData: string, id: string) =>
     request<{ intake: Intake; medications: Medication[] }>(
       `/api/meds/${id}/take`,

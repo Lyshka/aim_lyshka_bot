@@ -90,6 +90,18 @@ export class MedsController {
     return this.medsService.updateSettings(userId, dto);
   }
 
+  @Post('mute-today')
+  async muteToday(@Body() dto: InitDataDto) {
+    const userId = await this.userId(dto.initData);
+    return this.medsService.muteToday(userId);
+  }
+
+  @Post('unmute')
+  async unmute(@Body() dto: InitDataDto) {
+    const userId = await this.userId(dto.initData);
+    return this.medsService.unmute(userId);
+  }
+
   @Post()
   async create(@Body() dto: CreateMedicationDto) {
     const userId = await this.userId(dto.initData);

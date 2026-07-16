@@ -49,8 +49,8 @@ export class UsersService {
         settings: {
           create: {
             defaultInterval: 2,
-            reminderHour: 9,
-            reminderMinute: 0,
+        reminderHour: 12,
+        reminderMinute: 0,
             timezone: 'Europe/Moscow',
           },
         },

@@ -233,7 +233,7 @@ export class AppsService implements OnModuleInit {
           settings: {
             create: {
               defaultInterval: 2,
-              reminderHour: 9,
+              reminderHour: 12,
               reminderMinute: 0,
               timezone: 'Europe/Moscow',
             },

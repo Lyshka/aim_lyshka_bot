@@ -19,6 +19,7 @@ export function HomeScreen() {
   const { initData, haptic, user } = useTelegram();
   const [data, setData] = useState<Overview | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [muteBusy, setMuteBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,6 +63,35 @@ export function HomeScreen() {
     }
   }
 
+  async function toggleMute() {
+    setMuteBusy(true);
+    haptic('medium');
+    try {
+      const muted = data?.settings?.mutedToday;
+      const next = muted
+        ? await api.unmute(initData)
+        : await api.muteToday(initData);
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: prev.settings
+                ? {
+                    ...prev.settings,
+                    notificationsMutedUntil: next.notificationsMutedUntil,
+                    mutedToday: next.mutedToday,
+                  }
+                : prev.settings,
+            }
+          : prev,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    } finally {
+      setMuteBusy(false);
+    }
+  }
+
   if (error && !data) {
     return (
       <div className="rounded-3xl px-5 py-5" style={{ background: 'var(--tg-secondary)' }}>
@@ -80,6 +110,7 @@ export function HomeScreen() {
 
   const due = data.medications.filter((m) => m.active && m.isDue);
   const later = data.medications.filter((m) => m.active && !m.isDue);
+  const mutedToday = Boolean(data.settings?.mutedToday);
 
   return (
     <div className="space-y-5">
@@ -107,6 +138,22 @@ export function HomeScreen() {
               ? `Сейчас нужно принять: ${data.dueCount}`
               : 'Сегодня всё принято по расписанию'}
           </p>
+          <button
+            type="button"
+            disabled={muteBusy}
+            onClick={() => void toggleMute()}
+            className="mt-4 rounded-2xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+            style={{
+              background: mutedToday
+                ? 'color-mix(in srgb, #0f766e 22%, white)'
+                : 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
+              color: 'var(--tg-text)',
+            }}
+          >
+            {mutedToday
+              ? 'Уведомления выкл. до 00:00'
+              : 'Выключить уведомления на сегодня'}
+          </button>
         </div>
       </section>
 

@@ -64,7 +64,7 @@ export class UpdateMedicationDto extends InitDataDto {
 export class UpdateSettingsDto extends InitDataDto {
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(12)
   @Max(23)
   @Type(() => Number)
   reminderHour?: number;

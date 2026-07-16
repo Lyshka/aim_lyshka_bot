@@ -1,20 +1,26 @@
-function serializeMedication(med: {
-  id: string;
-  userId: bigint;
-  name: string;
-  tabletsCount: number;
-  mgPerTablet: number;
-  intervalDays: number;
-  instructions: string;
-  active: boolean;
-  nextDueAt: Date;
-  lastTakenAt: Date | null;
-  sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
-}) {
-  const now = Date.now();
+import { calendarDaysUntil } from '../common/calendar';
+
+function serializeMedication(
+  med: {
+    id: string;
+    userId: bigint;
+    name: string;
+    tabletsCount: number;
+    mgPerTablet: number;
+    intervalDays: number;
+    instructions: string;
+    active: boolean;
+    nextDueAt: Date;
+    lastTakenAt: Date | null;
+    sortOrder: number;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  timeZone = 'Europe/Moscow',
+) {
+  const now = new Date();
   const dueAt = med.nextDueAt.getTime();
+  const daysUntilDue = calendarDaysUntil(now, med.nextDueAt, timeZone);
   return {
     id: med.id,
     name: med.name,
@@ -27,8 +33,8 @@ function serializeMedication(med: {
     nextDueAt: med.nextDueAt.toISOString(),
     lastTakenAt: med.lastTakenAt?.toISOString() ?? null,
     sortOrder: med.sortOrder,
-    isDue: med.active && dueAt <= now,
-    daysUntilDue: Math.ceil((dueAt - now) / (1000 * 60 * 60 * 24)),
+    isDue: med.active && dueAt <= now.getTime(),
+    daysUntilDue,
   };
 }
 

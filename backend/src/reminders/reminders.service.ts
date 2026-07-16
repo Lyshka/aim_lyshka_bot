@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Markup } from 'telegraf';
+import { localNowParts } from '../common/calendar';
 import { BotService } from '../bot/bot.service';
 import { MedsService } from '../meds/meds.service';
 
@@ -33,17 +34,19 @@ export class RemindersService {
 
     for (const [userId, items] of byUser) {
       const settings = items[0]?.user.settings;
-      const hour = settings?.reminderHour ?? 9;
+      const timeZone = settings?.timezone || 'Europe/Moscow';
+      const mutedUntil = settings?.notificationsMutedUntil;
+      if (mutedUntil && mutedUntil.getTime() > now) {
+        continue;
+      }
+
+      const hour = Math.max(settings?.reminderHour ?? 12, 12);
       const minute = settings?.reminderMinute ?? 0;
-      const local = new Date(
-        new Date().toLocaleString('en-US', {
-          timeZone: settings?.timezone || 'Europe/Moscow',
-        }),
-      );
+      const local = localNowParts(timeZone);
 
       if (
-        local.getHours() < hour ||
-        (local.getHours() === hour && local.getMinutes() < minute)
+        local.hour < hour ||
+        (local.hour === hour && local.minute < minute)
       ) {
         continue;
       }
@@ -51,7 +54,7 @@ export class RemindersService {
       const notifyKey = `${userId}:${items
         .map((i) => i.id)
         .sort()
-        .join(',')}:${local.toDateString()}`;
+        .join(',')}:${local.year}-${local.month}-${local.day}`;
       const last = this.lastNotified.get(notifyKey);
       if (last && now - last < 6 * 60 * 60 * 1000) {
         continue;
@@ -72,7 +75,7 @@ export class RemindersService {
 
       const extra = webAppUrl
         ? Markup.inlineKeyboard([
-            Markup.button.webApp('Открыть приложение', webAppUrl),
+            Markup.button.webApp('Открыть Таблетки', webAppUrl),
           ])
         : undefined;
 

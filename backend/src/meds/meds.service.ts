@@ -4,6 +4,10 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import {
+  nextDueFromTake,
+  startOfNextLocalDay,
+} from '../common/calendar';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { serializeIntake, serializeMedication } from './meds.serializer';
@@ -15,12 +19,20 @@ export class MedsService {
     private readonly usersService: UsersService,
   ) {}
 
+  private async timezone(userId: number) {
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId: BigInt(userId) },
+    });
+    return settings?.timezone || 'Europe/Moscow';
+  }
+
   async list(userId: number) {
+    const timeZone = await this.timezone(userId);
     const meds = await this.prisma.medication.findMany({
       where: { userId: BigInt(userId) },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
-    return meds.map(serializeMedication);
+    return meds.map((med) => serializeMedication(med, timeZone));
   }
 
   async overview(userId: number) {
@@ -39,17 +51,29 @@ export class MedsService {
       }),
     ]);
 
+    const mutedUntil = settings?.notificationsMutedUntil ?? null;
+    const mutedToday = Boolean(mutedUntil && mutedUntil.getTime() > Date.now());
+
     return {
       medications: meds,
       dueCount: meds.filter((m) => m.isDue).length,
       settings: settings
         ? {
-            reminderHour: settings.reminderHour,
+            reminderHour: Math.max(settings.reminderHour, 12),
             reminderMinute: settings.reminderMinute,
             timezone: settings.timezone,
             defaultInterval: settings.defaultInterval,
+            notificationsMutedUntil: mutedUntil?.toISOString() ?? null,
+            mutedToday,
           }
-        : null,
+        : {
+            reminderHour: 12,
+            reminderMinute: 0,
+            timezone: 'Europe/Moscow',
+            defaultInterval: 2,
+            notificationsMutedUntil: null,
+            mutedToday: false,
+          },
       recentIntakes: recentIntakes.map(serializeIntake),
     };
   }
@@ -122,11 +146,10 @@ export class MedsService {
     options?: { tabletsCount?: number; note?: string },
   ) {
     const med = await this.getOwned(userId, medicationId);
+    const timeZone = await this.timezone(userId);
     const tablets = options?.tabletsCount ?? med.tabletsCount;
     const takenAt = new Date();
-    const nextDueAt = new Date(
-      takenAt.getTime() + med.intervalDays * 24 * 60 * 60 * 1000,
-    );
+    const nextDueAt = nextDueFromTake(takenAt, med.intervalDays, timeZone);
 
     const [, intake] = await this.prisma.$transaction([
       this.prisma.medication.update({
@@ -154,6 +177,52 @@ export class MedsService {
     return {
       intake: serializeIntake(intake),
       medications,
+    };
+  }
+
+  async muteToday(userId: number) {
+    const timeZone = await this.timezone(userId);
+    const until = startOfNextLocalDay(new Date(), timeZone);
+
+    const settings = await this.prisma.userSettings.upsert({
+      where: { userId: BigInt(userId) },
+      create: {
+        userId: BigInt(userId),
+        reminderHour: 12,
+        reminderMinute: 0,
+        defaultInterval: 2,
+        timezone: timeZone,
+        notificationsMutedUntil: until,
+      },
+      update: {
+        notificationsMutedUntil: until,
+      },
+    });
+
+    return {
+      notificationsMutedUntil: settings.notificationsMutedUntil?.toISOString() ?? null,
+      mutedToday: true,
+    };
+  }
+
+  async unmute(userId: number) {
+    const settings = await this.prisma.userSettings.upsert({
+      where: { userId: BigInt(userId) },
+      create: {
+        userId: BigInt(userId),
+        reminderHour: 12,
+        reminderMinute: 0,
+        defaultInterval: 2,
+        notificationsMutedUntil: null,
+      },
+      update: {
+        notificationsMutedUntil: null,
+      },
+    });
+
+    return {
+      notificationsMutedUntil: settings.notificationsMutedUntil?.toISOString() ?? null,
+      mutedToday: false,
     };
   }
 
@@ -295,26 +364,37 @@ export class MedsService {
       defaultInterval?: number;
     },
   ) {
+    const reminderHour =
+      data.reminderHour === undefined
+        ? undefined
+        : Math.max(12, Math.min(23, data.reminderHour));
+
     const settings = await this.prisma.userSettings.upsert({
       where: { userId: BigInt(userId) },
       create: {
         userId: BigInt(userId),
-        reminderHour: data.reminderHour ?? 9,
+        reminderHour: reminderHour ?? 12,
         reminderMinute: data.reminderMinute ?? 0,
         defaultInterval: data.defaultInterval ?? 2,
       },
       update: {
-        reminderHour: data.reminderHour,
+        reminderHour,
         reminderMinute: data.reminderMinute,
         defaultInterval: data.defaultInterval,
       },
     });
 
     return {
-      reminderHour: settings.reminderHour,
+      reminderHour: Math.max(settings.reminderHour, 12),
       reminderMinute: settings.reminderMinute,
       timezone: settings.timezone,
       defaultInterval: settings.defaultInterval,
+      notificationsMutedUntil:
+        settings.notificationsMutedUntil?.toISOString() ?? null,
+      mutedToday: Boolean(
+        settings.notificationsMutedUntil &&
+          settings.notificationsMutedUntil.getTime() > Date.now(),
+      ),
     };
   }
 
