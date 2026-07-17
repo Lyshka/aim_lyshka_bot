@@ -43,7 +43,7 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
             Администратор выдаст доступ позже.
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-x-3 gap-y-7">
+          <div className="grid grid-cols-4 gap-x-2 gap-y-6">
             {apps.map((app, index) => {
               const accent = appAccent(app.slug, app.color);
               return (
@@ -54,20 +54,20 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
                     haptic('medium');
                     onOpen(app);
                   }}
-                  className="launcher-tile group flex flex-col items-center gap-2.5 text-center"
+                  className="launcher-tile group flex flex-col items-center gap-2 text-center"
                   style={{ animationDelay: `${index * 60}ms` }}
                 >
                   <span
-                    className="launcher-icon relative flex h-[76px] w-[76px] items-center justify-center rounded-[24px] text-white transition duration-200 group-active:scale-95"
+                    className="launcher-icon relative flex h-[68px] w-[68px] items-center justify-center rounded-[22px] text-white transition duration-200 group-active:scale-95"
                     style={{
                       background: `linear-gradient(145deg, ${accent.from} 0%, ${accent.to} 100%)`,
-                      boxShadow: `0 14px 28px ${accent.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                      boxShadow: `0 12px 24px ${accent.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
                     }}
                   >
-                    <span className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-b from-white/25 to-transparent opacity-80" />
-                    <AppIcon slug={app.slug} className="relative h-10 w-10" />
+                    <span className="pointer-events-none absolute inset-0 rounded-[22px] bg-gradient-to-b from-white/25 to-transparent opacity-80" />
+                    <AppIcon slug={app.slug} className="relative h-9 w-9" />
                   </span>
-                  <span className="line-clamp-2 max-w-[96px] text-[12.5px] font-semibold tracking-[-0.01em]">
+                  <span className="line-clamp-2 max-w-[78px] text-[11.5px] font-semibold tracking-[-0.01em]">
                     {app.name}
                   </span>
                 </button>
