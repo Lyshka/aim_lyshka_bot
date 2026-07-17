@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Markup } from 'telegraf';
+import { AppsService } from '../apps/apps.service';
 import { localNowParts } from '../common/calendar';
 import { BotService } from '../bot/bot.service';
 import { MedsService } from '../meds/meds.service';
@@ -12,6 +13,7 @@ export class RemindersService {
   constructor(
     private readonly medsService: MedsService,
     private readonly botService: BotService,
+    private readonly appsService: AppsService,
   ) {}
 
   @Cron('*/15 * * * *')
@@ -21,12 +23,22 @@ export class RemindersService {
       return;
     }
 
+    const subscribers = new Set(await this.appsService.listSubscriberIds('meds'));
+
     const byUser = new Map<string, typeof due>();
     for (const item of due) {
+      const userId = Number(item.userId);
+      if (!subscribers.has(userId)) {
+        continue;
+      }
       const key = item.userId.toString();
       const list = byUser.get(key) ?? [];
       list.push(item);
       byUser.set(key, list);
+    }
+
+    if (byUser.size === 0) {
+      return;
     }
 
     const webAppUrl = this.botService.getWebAppUrl();

@@ -86,22 +86,7 @@ export class CatsService {
   }
 
   async listSubscriberIds() {
-    const app = await this.prisma.app.findUnique({ where: { slug: 'cats' } });
-    if (!app) {
-      return [] as number[];
-    }
-
-    const grants = await this.prisma.userAppGrant.findMany({
-      where: { appId: app.id },
-      select: { userId: true },
-    });
-    const ids = new Set(grants.map((g) => Number(g.userId)));
-
-    for (const adminId of this.appsService.getAdminIds()) {
-      ids.add(adminId);
-    }
-
-    return [...ids];
+    return this.appsService.listSubscriberIds('cats');
   }
 
   async deliverToday() {

@@ -196,6 +196,27 @@ export class AppsService implements OnModuleInit {
     }
   }
 
+  async listSubscriberIds(slug: string): Promise<number[]> {
+    const app = await this.prisma.app.findFirst({
+      where: { slug, active: true, isSystem: false },
+    });
+    if (!app) {
+      return [];
+    }
+
+    const grants = await this.prisma.userAppGrant.findMany({
+      where: { appId: app.id },
+      select: { userId: true },
+    });
+    const ids = new Set(grants.map((g) => Number(g.userId)));
+
+    for (const adminId of this.getAdminIds()) {
+      ids.add(adminId);
+    }
+
+    return [...ids];
+  }
+
   async listAllApps() {
     const apps = await this.prisma.app.findMany({
       where: { active: true },

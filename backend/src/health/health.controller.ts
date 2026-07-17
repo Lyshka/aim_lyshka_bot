@@ -1,4 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { AppsService } from '../apps/apps.service';
 import { AuthService } from '../auth/auth.service';
 import { HealthIngestDto, HealthInitDto, HealthManualDto } from './health.dto';
 import { HealthService } from './health.service';
@@ -8,6 +9,7 @@ export class HealthController {
   constructor(
     private readonly authService: AuthService,
     private readonly healthService: HealthService,
+    private readonly appsService: AppsService,
   ) {}
 
   @Post('overview')
@@ -40,6 +42,7 @@ export class HealthController {
   @Post('ingest')
   async ingest(@Body() dto: HealthIngestDto) {
     this.healthService.assertIngestToken(dto.token);
+    await this.appsService.assertAccess(dto.userId, 'health');
     return this.healthService.upsertDay(dto.userId, {
       day: dto.day,
       steps: dto.steps,
