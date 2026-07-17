@@ -159,7 +159,7 @@ export class GamesService {
       });
 
       await this.setActiveProfile(userId, profile.id);
-      await this.syncProfile(userId, profile.id);
+      await this.syncProfile(userId, profile.id, true);
       return this.overview(userId);
     } catch (err) {
       this.rethrowDbError(err);
@@ -209,7 +209,11 @@ export class GamesService {
     }
   }
 
-  async syncProfile(userId: number, profileId: string) {
+  async syncProfile(
+    userId: number,
+    profileId: string,
+    required = false,
+  ) {
     const apiKey = this.steamApiKey();
     const profile = await this.prisma.steamProfile.findFirst({
       where: { id: profileId, userId: BigInt(userId) },
@@ -219,10 +223,23 @@ export class GamesService {
     }
 
     const summary = await fetchPlayerSummary(profile.steamId, apiKey);
-    const [wishlist, ownedGames] = await Promise.all([
-      fetchWishlist(profile.steamId),
-      fetchOwnedGames(profile.steamId, apiKey),
-    ]);
+
+    let wishlist: Awaited<ReturnType<typeof fetchWishlist>>;
+    try {
+      wishlist = await fetchWishlist(profile.steamId);
+    } catch (err) {
+      if (required) {
+        throw err;
+      }
+      wishlist = new Map();
+    }
+
+    let ownedGames: Awaited<ReturnType<typeof fetchOwnedGames>>;
+    try {
+      ownedGames = await fetchOwnedGames(profile.steamId, apiKey);
+    } catch {
+      ownedGames = new Map();
+    }
 
     const wishlistIds = [...wishlist.keys()];
     const ownedIds = [...ownedGames.keys()];

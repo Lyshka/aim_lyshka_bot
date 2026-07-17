@@ -68,14 +68,16 @@ export function GamesApp({ onBack }: GamesAppProps) {
       return;
     }
     setBusy(true);
-    setStatus(null);
+    setStatus('Добавляем аккаунт и синхронизируем…');
     haptic('medium');
     try {
       const overview = await api.gamesLink(initData, steamInput.trim());
       setData(overview);
       setSteamInput('');
       setAdding(false);
-      setStatus('Аккаунт добавлен');
+      setStatus(
+        `Синхронизировано: есть ${overview.stats.owned}, нет ${overview.stats.missing}`,
+      );
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Ошибка привязки');
     } finally {
