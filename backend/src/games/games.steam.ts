@@ -119,48 +119,49 @@ async function fetchOwnedAppIds(
   apiKey: string,
 ): Promise<Set<number>> {
   if (!apiKey) {
-    return new Set();
+    throw new ForbiddenException(
+      'STEAM_API_KEY не задан на сервере — вкладка «Есть» не может проверить библиотеку.',
+    );
+  }
+
+  const params = new URLSearchParams({
+    key: apiKey,
+    steamid: steamId,
+    include_appinfo: '1',
+    include_played_free_games: '1',
+    include_free_sub: '1',
+    format: 'json',
+  });
+
+  const response = await fetch(
+    `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new ForbiddenException(
+      'Не удалось загрузить библиотеку Steam. Проверь STEAM_API_KEY.',
+    );
+  }
+
+  const data = (await response.json()) as OwnedGamesResponse;
+  const games = data.response?.games;
+  const gameCount = data.response?.game_count;
+
+  if (!games || (gameCount === 0 && games.length === 0)) {
+    if (gameCount === 0) {
+      return new Set();
+    }
+    throw new ForbiddenException(
+      'Библиотека скрыта. В Steam: Конфиденциальность → Список игр → Открытый.',
+    );
   }
 
   const owned = new Set<number>();
-  let cursor: string | undefined;
-  let guard = 0;
-
-  while (guard < 20) {
-    guard += 1;
-    const params = new URLSearchParams({
-      key: apiKey,
-      steamid: steamId,
-      include_appinfo: '0',
-      include_played_free_games: '1',
-      format: 'json',
-    });
-    if (cursor) {
-      params.set('start_assetid', cursor);
-    }
-
-    const response = await fetch(
-      `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?${params.toString()}`,
-    );
-    if (!response.ok) {
-      break;
-    }
-
-    const data = (await response.json()) as OwnedGamesResponse;
-    const games = data.response?.games ?? [];
-    for (const game of games) {
+  for (const game of games) {
+    if (game.appid) {
       owned.add(game.appid);
     }
-
-    if (games.length < 1000) {
-      break;
-    }
-    cursor = String(games[games.length - 1]?.appid ?? '');
-    if (!cursor) {
-      break;
-    }
   }
-
   return owned;
 }
 

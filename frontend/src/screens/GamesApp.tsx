@@ -233,7 +233,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   <ul className="mt-2 space-y-1" style={{ color: 'var(--tg-hint)' }}>
                     <li>• Профиль — публичный</li>
                     <li>• Список желаемого — виден всем</li>
-                    <li>• Библиотека игр — публичная (чтобы видеть «Есть»)</li>
+                    <li>• Список игр (библиотека) — публичный, иначе «Есть» будет пустым</li>
                   </ul>
                 </section>
               </>
