@@ -75,8 +75,22 @@ export class CatsService {
     const imageKeys = new Set(usedImages.map((i) => i.imageKey));
     const textKeys = new Set(usedImages.map((i) => i.textKey));
 
-    const image = await fetchCatImage(imageKeys);
-    const cute = await inventUniqueText(textKeys);
+    const user = await this.prisma.user.findUnique({
+      where: { id: uid },
+      select: { firstName: true },
+    });
+
+    const contentCtx = {
+      userId,
+      deliveryDate,
+      name: user?.firstName ?? undefined,
+    };
+
+    const image = await fetchCatImage({
+      ...contentCtx,
+      excludeKeys: imageKeys,
+    });
+    const cute = await inventUniqueText(contentCtx, textKeys);
 
     try {
       return await this.prisma.catPost.create({
