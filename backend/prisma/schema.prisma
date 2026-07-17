@@ -56,6 +56,10 @@ model UserSettings {
   userId                   BigInt    @unique
   reminderHour             Int       @default(12)
   reminderMinute           Int       @default(0)
+  catsReminderHour         Int       @default(6)
+  catsReminderMinute       Int       @default(0)
+  catsReminderChangedOn    String?
+  catsLastDeliveryDate     String?
   timezone                 String    @default("Europe/Moscow")
   defaultInterval          Int       @default(1)
   notificationsMutedUntil  DateTime?

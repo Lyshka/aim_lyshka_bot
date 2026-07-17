@@ -125,9 +125,17 @@ export type CatPost = {
   sentAt: string | null;
 };
 
+export type CatsSettings = {
+  reminderHour: number;
+  reminderMinute: number;
+  timezone: string;
+  canChangeTime: boolean;
+};
+
 export type CatFeed = {
   today: CatPost;
   history: CatPost[];
+  settings: CatsSettings;
 };
 
 export type HealthDay = {
@@ -183,10 +191,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
-  catsFeed: (initData: string) =>
+  catsFeed: (
+    initData: string,
+    filters?: { from?: string; to?: string },
+  ) =>
     request<CatFeed>('/api/cats/feed', {
       method: 'POST',
-      body: JSON.stringify({ initData }),
+      body: JSON.stringify({ initData, ...filters }),
+    }),
+  catsTime: (initData: string, data: { hour: number; minute: number }) =>
+    request<CatsSettings>('/api/cats/time', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
     }),
   healthOverview: (initData: string) =>
     request<HealthOverview>('/api/health/overview', {

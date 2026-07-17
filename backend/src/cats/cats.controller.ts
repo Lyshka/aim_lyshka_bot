@@ -1,13 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { IsOptional, IsString } from 'class-validator';
 import { AuthService } from '../auth/auth.service';
+import { CatsInitDto, CatsTimeDto } from './cats.dto';
 import { CatsService } from './cats.service';
-
-class CatsInitDto {
-  @IsOptional()
-  @IsString()
-  initData?: string;
-}
 
 @Controller('cats')
 export class CatsController {
@@ -18,7 +12,24 @@ export class CatsController {
 
   @Post('feed')
   async feed(@Body() dto: CatsInitDto) {
-    await this.authService.authenticateApp(dto.initData ?? '', 'cats');
-    return this.catsService.feed();
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'cats',
+    );
+    return this.catsService.feed(session.user.id, dto.from, dto.to);
+  }
+
+  @Post('time')
+  async time(@Body() dto: CatsTimeDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'cats',
+    );
+    return this.catsService.updateReminderTime(
+      session.user.id,
+      dto.hour,
+      dto.minute,
+      session.isAdmin,
+    );
   }
 }

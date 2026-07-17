@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type Intake, type Medication } from '../api/client';
 import { CustomCheckbox } from '../components/CustomCheckbox';
-import { CustomDateField } from '../components/CustomDateField';
+import { DayRangeFilter } from '../components/DayRangeFilter';
 import { CustomSelect } from '../components/CustomSelect';
 import { useTelegram } from '../telegram/TelegramProvider';
 
@@ -188,40 +188,27 @@ export function HistoryScreen() {
         </p>
       </div>
 
-      <section
-        className="space-y-3 rounded-3xl px-5 py-4"
-        style={{ background: 'var(--tg-secondary)' }}
+      <DayRangeFilter
+        from={from}
+        to={to}
+        onFromChange={setFrom}
+        onToChange={setTo}
+        onApply={() => void load()}
+        onReset={resetFilter}
+        disabled={busy}
       >
-        <p className="text-sm font-medium">Фильтры</p>
-        <div className="grid grid-cols-2 gap-2">
-          <CustomDateField label="От" value={from} onChange={setFrom} />
-          <CustomDateField label="До" value={to} onChange={setTo} />
-        </div>
-
-        <div>
-          <CustomSelect
-            label="Препарат"
-            options={medOptions}
-            value={medicationId}
-            onChange={setMedicationId}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <ActionButton disabled={busy} onClick={() => void load()} fullWidth>
-            Применить
-          </ActionButton>
-          <ActionButton disabled={busy} onClick={resetFilter} secondary fullWidth>
-            Сбросить
-          </ActionButton>
-        </div>
-
+        <CustomSelect
+          label="Препарат"
+          options={medOptions}
+          value={medicationId}
+          onChange={setMedicationId}
+        />
         <CustomCheckbox
           checked={showDeleted}
           onChange={setShowDeleted}
           label="Показать удалённые"
         />
-      </section>
+      </DayRangeFilter>
 
       {!showDeleted ? (
         <section

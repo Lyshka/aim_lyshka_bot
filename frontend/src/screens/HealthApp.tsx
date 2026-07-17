@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type HealthDay, type HealthOverview } from '../api/client';
-import { CustomDateField } from '../components/CustomDateField';
+import { DayRangeFilter } from '../components/DayRangeFilter';
 import { Shell } from '../components/Shell';
 import { useTelegram } from '../telegram/TelegramProvider';
 
@@ -210,39 +210,23 @@ export function HealthApp({ onBack }: HealthAppProps) {
 
         {tab === 'history' ? (
           <div className="space-y-4">
-            <section
-              className="space-y-3 rounded-3xl px-5 py-4"
-              style={{ background: 'color-mix(in srgb, white 72%, #dbeafe)' }}
-            >
-              <p className="text-sm font-medium">Фильтры</p>
-              <div className="grid grid-cols-2 gap-2">
-                <CustomDateField label="От" value={from} onChange={setFrom} />
-                <CustomDateField label="До" value={to} onChange={setTo} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <ActionButton
-                  fullWidth
-                  onClick={() => {
-                    setAppliedFrom(from);
-                    setAppliedTo(to);
-                  }}
-                >
-                  Применить
-                </ActionButton>
-                <ActionButton
-                  fullWidth
-                  secondary
-                  onClick={() => {
-                    setFrom('');
-                    setTo('');
-                    setAppliedFrom('');
-                    setAppliedTo('');
-                  }}
-                >
-                  Сбросить
-                </ActionButton>
-              </div>
-            </section>
+            <DayRangeFilter
+              from={from}
+              to={to}
+              onFromChange={setFrom}
+              onToChange={setTo}
+              onApply={() => {
+                setAppliedFrom(from);
+                setAppliedTo(to);
+              }}
+              onReset={() => {
+                setFrom('');
+                setTo('');
+                setAppliedFrom('');
+                setAppliedTo('');
+              }}
+              background="color-mix(in srgb, white 72%, #dbeafe)"
+            />
 
             {filteredHistory.length === 0 ? (
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
@@ -338,34 +322,6 @@ function HistoryRow({ row }: { row: HealthDay }) {
         </p>
       )}
     </article>
-  );
-}
-
-function ActionButton({
-  children,
-  onClick,
-  secondary,
-  fullWidth,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  secondary?: boolean;
-  fullWidth?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-xl px-3 py-2.5 text-sm font-medium ${fullWidth ? 'w-full' : ''}`}
-      style={{
-        background: secondary
-          ? 'color-mix(in srgb, var(--tg-hint) 14%, transparent)'
-          : 'linear-gradient(145deg, #3b82f6, #1d4ed8)',
-        color: secondary ? 'var(--tg-text)' : '#fff',
-      }}
-    >
-      {children}
-    </button>
   );
 }
 
