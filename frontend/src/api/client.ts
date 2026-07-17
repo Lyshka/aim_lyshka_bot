@@ -201,6 +201,11 @@ export type SteamProfile = {
   active: boolean;
   profileUrl: string;
   lastSyncAt: string | null;
+  stats: {
+    total: number;
+    owned: number;
+    missing: number;
+  };
 };
 
 export type GamesOverview = {

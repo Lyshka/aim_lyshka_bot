@@ -15,15 +15,18 @@ import {
   resolveSteamId,
 } from './games.steam';
 
-function serializeProfile(profile: {
-  id: string;
-  steamId: string;
-  vanityUrl: string | null;
-  personaName: string;
-  avatarUrl: string;
-  active: boolean;
-  lastSyncAt: Date | null;
-}) {
+function serializeProfile(
+  profile: {
+    id: string;
+    steamId: string;
+    vanityUrl: string | null;
+    personaName: string;
+    avatarUrl: string;
+    active: boolean;
+    lastSyncAt: Date | null;
+  },
+  stats?: { total: number; owned: number; missing: number },
+) {
   return {
     id: profile.id,
     steamId: profile.steamId,
@@ -35,6 +38,7 @@ function serializeProfile(profile: {
       ? `https://steamcommunity.com/id/${profile.vanityUrl}`
       : `https://steamcommunity.com/profiles/${profile.steamId}`,
     lastSyncAt: profile.lastSyncAt?.toISOString() ?? null,
+    stats: stats ?? { total: 0, owned: 0, missing: 0 },
   };
 }
 
@@ -99,6 +103,42 @@ export class GamesService {
         active.active = true;
       }
 
+      const allGames = await this.prisma.steamWishlistGame.findMany({
+        where: { userId: uid },
+        select: { steamProfileId: true, owned: true },
+      });
+
+      const statsByProfile = new Map<
+        string,
+        { total: number; owned: number; missing: number }
+      >();
+      for (const profile of profiles) {
+        statsByProfile.set(profile.id, { total: 0, owned: 0, missing: 0 });
+      }
+      for (const game of allGames) {
+        const stats = statsByProfile.get(game.steamProfileId);
+        if (!stats) {
+          continue;
+        }
+        stats.total += 1;
+        if (game.owned) {
+          stats.owned += 1;
+        } else {
+          stats.missing += 1;
+        }
+      }
+
+      const aggregate = {
+        total: 0,
+        owned: 0,
+        missing: 0,
+      };
+      for (const stats of statsByProfile.values()) {
+        aggregate.total += stats.total;
+        aggregate.owned += stats.owned;
+        aggregate.missing += stats.missing;
+      }
+
       const games = active
         ? await this.prisma.steamWishlistGame.findMany({
             where: { steamProfileId: active.id },
@@ -111,13 +151,13 @@ export class GamesService {
 
       return {
         steamConfigured: Boolean(this.steamApiKey()),
-        profiles: profiles.map(serializeProfile),
-        profile: active ? serializeProfile(active) : null,
-        stats: {
-          total: missing.length + owned.length,
-          owned: owned.length,
-          missing: missing.length,
-        },
+        profiles: profiles.map((profile) =>
+          serializeProfile(profile, statsByProfile.get(profile.id)),
+        ),
+        profile: active
+          ? serializeProfile(active, statsByProfile.get(active.id))
+          : null,
+        stats: aggregate,
         owned: owned.map(serializeGame),
         missing: missing.map(serializeGame),
       };

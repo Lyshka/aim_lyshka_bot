@@ -203,6 +203,9 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
                   <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
                 </div>
+                <p className="px-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
+                  Сумма по всем аккаунтам
+                </p>
 
                 <section className="space-y-2">
                   <p className="px-1 text-sm font-medium">Аккаунты Steam</p>
@@ -410,6 +413,13 @@ function AccountCard({
           </p>
         </div>
       </button>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MiniStat label="Всего" value={profile.stats.total} />
+        <MiniStat label="Есть" value={profile.stats.owned} accent="#16a34a" />
+        <MiniStat label="Нет" value={profile.stats.missing} accent="#dc2626" />
+      </div>
+
       <button
         type="button"
         disabled={busy}
@@ -423,6 +433,35 @@ function AccountCard({
         Удалить аккаунт
       </button>
     </article>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent?: string;
+}) {
+  return (
+    <div
+      className="rounded-xl px-2 py-2 text-center"
+      style={{
+        background: 'color-mix(in srgb, white 55%, transparent)',
+      }}
+    >
+      <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--tg-hint)' }}>
+        {label}
+      </p>
+      <p
+        className="mt-0.5 text-base font-semibold"
+        style={{ color: accent ?? 'var(--tg-text)' }}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
