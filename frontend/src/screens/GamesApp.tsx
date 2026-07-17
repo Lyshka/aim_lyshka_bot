@@ -871,34 +871,49 @@ type InvSort = 'price_desc' | 'price_asc' | 'name';
 type InvGroup = 'none' | 'type' | 'rarity' | 'exterior';
 type InvPriceFilter = 'all' | 'priced' | 'unpriced';
 
-function Chip({
-  active,
+function FilterSelect({
   label,
-  onClick,
+  value,
+  onChange,
+  options,
 }: {
-  active: boolean;
   label: string;
-  onClick: () => void;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold"
-      style={{
-        background: active
-          ? 'linear-gradient(145deg, #1b2838, #2a475e)'
-          : 'color-mix(in srgb, #66c0f4 16%, transparent)',
-        color: active ? '#c7d5e0' : 'var(--tg-text)',
-      }}
-    >
-      {label}
-    </button>
+    <label className="block space-y-1">
+      <span
+        className="px-0.5 text-[11px] font-medium"
+        style={{ color: 'var(--tg-hint)' }}
+      >
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
+        style={{
+          background: 'var(--tg-bg)',
+          color: 'var(--tg-text)',
+          boxShadow:
+            'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
 function InventoryPanel({ items }: { items: InventoryItem[] }) {
   const [query, setQuery] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
   const [exteriorFilter, setExteriorFilter] = useState('all');
@@ -918,6 +933,15 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
     () => uniqueSorted(items.map((item) => item.exterior)),
     [items],
   );
+
+  const activeFilterCount = [
+    typeFilter !== 'all',
+    rarityFilter !== 'all',
+    exteriorFilter !== 'all',
+    priceFilter !== 'all',
+    sort !== 'price_desc',
+    groupBy !== 'type',
+  ].filter(Boolean).length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1029,6 +1053,15 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
     };
   }, [filtered]);
 
+  function resetFilters() {
+    setTypeFilter('all');
+    setRarityFilter('all');
+    setExteriorFilter('all');
+    setPriceFilter('all');
+    setSort('price_desc');
+    setGroupBy('type');
+  }
+
   if (items.length === 0) {
     return (
       <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
@@ -1048,127 +1081,119 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
         />
       </div>
 
-      <div className="relative">
+      <div className="flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Найти скин…"
-          className="w-full rounded-2xl border-0 px-4 py-3 text-sm outline-none"
+          className="min-w-0 flex-1 rounded-2xl border-0 px-4 py-3 text-sm outline-none"
           style={{
-            background: 'color-mix(in srgb, #66c0f4 14%, white)',
+            background: 'var(--tg-bg)',
             color: 'var(--tg-text)',
-            boxShadow: 'inset 0 0 0 1px color-mix(in srgb, #66c0f4 35%, transparent)',
+            boxShadow:
+              'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
           }}
         />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          className="relative shrink-0 rounded-2xl px-3.5 py-3 text-sm font-semibold"
+          style={{
+            background: filtersOpen
+              ? 'linear-gradient(145deg, #1b2838, #2a475e)'
+              : 'var(--tg-bg)',
+            color: filtersOpen ? '#c7d5e0' : 'var(--tg-text)',
+            boxShadow:
+              'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
+          }}
+        >
+          Фильтры
+          {activeFilterCount > 0 ? (
+            <span
+              className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+              style={{ background: '#66c0f4', color: '#1b2838' }}
+            >
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <Chip
-          active={priceFilter === 'all'}
-          label="Все"
-          onClick={() => setPriceFilter('all')}
-        />
-        <Chip
-          active={priceFilter === 'priced'}
-          label="С ценой"
-          onClick={() => setPriceFilter('priced')}
-        />
-        <Chip
-          active={priceFilter === 'unpriced'}
-          label="Без цены"
-          onClick={() => setPriceFilter('unpriced')}
-        />
-        <Chip
-          active={sort === 'price_desc'}
-          label="Дороже"
-          onClick={() => setSort('price_desc')}
-        />
-        <Chip
-          active={sort === 'price_asc'}
-          label="Дешевле"
-          onClick={() => setSort('price_asc')}
-        />
-        <Chip
-          active={sort === 'name'}
-          label="А–Я"
-          onClick={() => setSort('name')}
-        />
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <Chip
-          active={groupBy === 'type'}
-          label="По типу"
-          onClick={() => setGroupBy('type')}
-        />
-        <Chip
-          active={groupBy === 'rarity'}
-          label="По редкости"
-          onClick={() => setGroupBy('rarity')}
-        />
-        <Chip
-          active={groupBy === 'exterior'}
-          label="По износу"
-          onClick={() => setGroupBy('exterior')}
-        />
-        <Chip
-          active={groupBy === 'none'}
-          label="Без групп"
-          onClick={() => setGroupBy('none')}
-        />
-      </div>
-
-      {types.length > 1 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <Chip
-            active={typeFilter === 'all'}
-            label="Тип: все"
-            onClick={() => setTypeFilter('all')}
-          />
-          {types.map((value) => (
-            <Chip
-              key={value}
-              active={typeFilter === value}
-              label={value}
-              onClick={() => setTypeFilter(value)}
+      {filtersOpen ? (
+        <div className="space-y-3 rounded-2xl p-3" style={{ background: 'var(--tg-bg)' }}>
+          <div className="grid grid-cols-2 gap-2.5">
+            <FilterSelect
+              label="Сортировка"
+              value={sort}
+              onChange={(value) => setSort(value as InvSort)}
+              options={[
+                { value: 'price_desc', label: 'Сначала дороже' },
+                { value: 'price_asc', label: 'Сначала дешевле' },
+                { value: 'name', label: 'По названию' },
+              ]}
             />
-          ))}
-        </div>
-      ) : null}
-
-      {rarities.length > 0 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <Chip
-            active={rarityFilter === 'all'}
-            label="Редкость: все"
-            onClick={() => setRarityFilter('all')}
-          />
-          {rarities.map((value) => (
-            <Chip
-              key={value}
-              active={rarityFilter === value}
-              label={value}
-              onClick={() => setRarityFilter(value)}
+            <FilterSelect
+              label="Группировка"
+              value={groupBy}
+              onChange={(value) => setGroupBy(value as InvGroup)}
+              options={[
+                { value: 'type', label: 'По типу' },
+                { value: 'rarity', label: 'По редкости' },
+                { value: 'exterior', label: 'По износу' },
+                { value: 'none', label: 'Без групп' },
+              ]}
             />
-          ))}
-        </div>
-      ) : null}
-
-      {exteriors.length > 0 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <Chip
-            active={exteriorFilter === 'all'}
-            label="Износ: все"
-            onClick={() => setExteriorFilter('all')}
-          />
-          {exteriors.map((value) => (
-            <Chip
-              key={value}
-              active={exteriorFilter === value}
-              label={value}
-              onClick={() => setExteriorFilter(value)}
+            <FilterSelect
+              label="Цена"
+              value={priceFilter}
+              onChange={(value) => setPriceFilter(value as InvPriceFilter)}
+              options={[
+                { value: 'all', label: 'Все' },
+                { value: 'priced', label: 'С ценой' },
+                { value: 'unpriced', label: 'Без цены' },
+              ]}
             />
-          ))}
+            <FilterSelect
+              label="Тип"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: 'all', label: 'Все' },
+                ...types.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <FilterSelect
+              label="Редкость"
+              value={rarityFilter}
+              onChange={setRarityFilter}
+              options={[
+                { value: 'all', label: 'Все' },
+                ...rarities.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <FilterSelect
+              label="Износ"
+              value={exteriorFilter}
+              onChange={setExteriorFilter}
+              options={[
+                { value: 'all', label: 'Все' },
+                ...exteriors.map((value) => ({ value, label: value })),
+              ]}
+            />
+          </div>
+          {activeFilterCount > 0 ? (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="w-full rounded-xl px-3 py-2 text-sm font-medium"
+              style={{
+                background: 'color-mix(in srgb, #66c0f4 14%, transparent)',
+                color: '#1b2838',
+              }}
+            >
+              Сбросить фильтры
+            </button>
+          ) : null}
         </div>
       ) : null}
 
