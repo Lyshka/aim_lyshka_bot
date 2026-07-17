@@ -142,11 +142,8 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
   }
 
   return (
-    <div className="launcher relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col overflow-hidden pb-24">
-      <div className="launcher-orb launcher-orb-a" aria-hidden />
-      <div className="launcher-orb launcher-orb-b" aria-hidden />
-
-      <div className="relative z-10 px-4 pt-5">
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col pb-24">
+      <div className="px-4 pt-5">
         <div className="mb-6 flex items-center gap-3">
           <button
             type="button"
@@ -278,9 +275,10 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 border-t px-3 pt-2"
+        className="fixed inset-x-0 bottom-0 z-50 border-t px-3 pt-2"
         style={{
-          background: 'var(--tg-secondary)',
+          background: 'color-mix(in srgb, var(--tg-secondary) 92%, white)',
+          backdropFilter: 'blur(12px)',
           borderColor: 'color-mix(in srgb, var(--tg-hint) 25%, transparent)',
           paddingBottom: 'calc(10px + var(--safe-bottom))',
         }}

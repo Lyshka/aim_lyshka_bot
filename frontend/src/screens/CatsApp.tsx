@@ -74,10 +74,8 @@ export function CatsApp({ onBack }: CatsAppProps) {
   const history = feed.history.filter((item) => item.id !== feed.today.id);
 
   return (
-    <div className="cats-app relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden px-4 pt-5 pb-10">
-      <div className="cats-glow" aria-hidden />
-
-      <div className="relative z-10 mb-5 flex items-center gap-3">
+    <div className="relative mx-auto min-h-[100dvh] w-full max-w-md px-4 pt-5 pb-10">
+      <div className="mb-5 flex items-center gap-3">
         <button
           type="button"
           onClick={() => {
@@ -102,7 +100,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
         </div>
       </div>
 
-      <article className="relative z-10 overflow-hidden rounded-[32px] shadow-[0_24px_60px_rgba(194,65,12,0.18)]">
+      <article className="overflow-hidden rounded-[32px] shadow-[0_24px_60px_rgba(194,65,12,0.18)]">
         <div className="relative aspect-[4/5] overflow-hidden bg-orange-100">
           <img
             src={feed.today.imageUrl}
@@ -121,7 +119,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
       </article>
 
       {history.length > 0 ? (
-        <section className="relative z-10 mt-8">
+        <section className="mt-8">
           <h2 className="font-display mb-4 text-lg font-semibold">История</h2>
           <div className="space-y-3">
             {history.map((item) => (

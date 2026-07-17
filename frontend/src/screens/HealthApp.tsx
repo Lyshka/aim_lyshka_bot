@@ -121,10 +121,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
 
   return (
     <>
-      <div className="health-app" aria-hidden />
-      <div className="health-glow" aria-hidden />
-
-      <div className="relative z-10 mx-auto w-full max-w-md">
+      <div className="relative mx-auto w-full max-w-md">
         <div className="px-4 pt-4">
         <button
           type="button"
@@ -152,7 +149,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
 
       <Shell tab={tab} onTabChange={setTab} tabs={healthTabs}>
         {tab === 'home' ? (
-          <div className="relative z-10 space-y-3">
+          <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div
                 className="rounded-[28px] px-4 py-5 shadow-[0_16px_40px_rgba(37,99,235,0.12)]"
@@ -212,7 +209,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
         ) : null}
 
         {tab === 'history' ? (
-          <div className="relative z-10 space-y-4">
+          <div className="space-y-4">
             <section
               className="space-y-3 rounded-3xl px-5 py-4"
               style={{ background: 'color-mix(in srgb, white 72%, #dbeafe)' }}
