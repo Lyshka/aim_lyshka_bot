@@ -19,8 +19,18 @@ type ResolveResponse = {
 type OwnedGamesResponse = {
   response?: {
     game_count?: number;
-    games?: { appid: number; name?: string }[];
+    games?: {
+      appid: number;
+      name?: string;
+      img_icon_url?: string;
+    }[];
   };
+};
+
+type OwnedGameInfo = {
+  appId: string;
+  name: string;
+  imageUrl: string;
 };
 
 type WishlistEntry = {
@@ -114,13 +124,13 @@ async function resolveSteamId(input: string, apiKey: string): Promise<string> {
   throw new BadRequestException('Не удалось определить Steam профиль');
 }
 
-async function fetchOwnedAppIds(
+async function fetchOwnedGames(
   steamId: string,
   apiKey: string,
-): Promise<Set<number>> {
+): Promise<Map<string, OwnedGameInfo>> {
   if (!apiKey) {
     throw new ForbiddenException(
-      'STEAM_API_KEY не задан на сервере — вкладка «Есть» не может проверить библиотеку.',
+      'STEAM_API_KEY не задан на сервере — вкладка «Есть» не может загрузить библиотеку.',
     );
   }
 
@@ -144,23 +154,38 @@ async function fetchOwnedAppIds(
   }
 
   const data = (await response.json()) as OwnedGamesResponse;
-  const games = data.response?.games;
-  const gameCount = data.response?.game_count;
+  const responseBody = data.response;
+  const games = responseBody?.games;
+  const gameCount = responseBody?.game_count;
 
-  if (!games || (gameCount === 0 && games.length === 0)) {
+  if (!responseBody || (games == null && gameCount == null)) {
+    throw new ForbiddenException(
+      'Библиотека скрыта. В Steam: Конфиденциальность → Список игр → Открытый.',
+    );
+  }
+
+  if (!games || games.length === 0) {
     if (gameCount === 0) {
-      return new Set();
+      throw new ForbiddenException(
+        'Библиотека пуста или скрыта. Открой «Список игр» в конфиденциальности Steam.',
+      );
     }
     throw new ForbiddenException(
       'Библиотека скрыта. В Steam: Конфиденциальность → Список игр → Открытый.',
     );
   }
 
-  const owned = new Set<number>();
+  const owned = new Map<string, OwnedGameInfo>();
   for (const game of games) {
-    if (game.appid) {
-      owned.add(game.appid);
+    if (!game.appid) {
+      continue;
     }
+    const appId = String(game.appid);
+    owned.set(appId, {
+      appId,
+      name: game.name?.trim() || `Игра ${appId}`,
+      imageUrl: headerImage(appId),
+    });
   }
   return owned;
 }
@@ -265,7 +290,7 @@ async function fetchGamesMeta(appIds: string[]) {
 export {
   parseSteamInput,
   resolveSteamId,
-  fetchOwnedAppIds,
+  fetchOwnedGames,
   fetchWishlist,
   fetchGamesMeta,
   headerImage,

@@ -138,7 +138,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
             Игры
           </h1>
           <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Steam wishlist — что уже есть и чего нет
+            Steam wishlist и библиотека — что есть и чего нет
           </p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Wishlist" value={data.stats.total} />
+                  <StatCard label="Всего" value={data.stats.total} />
                   <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
                   <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
                 </div>
@@ -247,8 +247,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
                 {data.profile
                   ? tab === 'owned'
-                    ? 'Из wishlist пока ничего не куплено'
-                    : 'Все игры из wishlist уже есть'
+                    ? 'В библиотеке пока пусто или список игр скрыт в Steam'
+                    : 'Wishlist пуст — все желаемые игры уже куплены или список пустой'
                   : 'Сначала привяжи Steam на вкладке «Обзор»'}
               </p>
             ) : (

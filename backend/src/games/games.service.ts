@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   fetchGamesMeta,
-  fetchOwnedAppIds,
+  fetchOwnedGames,
   fetchWishlist,
   parseSteamInput,
   resolveSteamId,
@@ -83,7 +83,7 @@ export class GamesService {
         steamConfigured: Boolean(this.steamApiKey()),
         profile: profile ? serializeProfile(profile) : null,
         stats: {
-          total: games.length,
+          total: missing.length + owned.length,
           owned: owned.length,
           missing: missing.length,
         },
@@ -143,20 +143,21 @@ export class GamesService {
         throw new NotFoundException('Сначала привяжи Steam профиль');
       }
 
-      const [wishlist, ownedIds] = await Promise.all([
+      const [wishlist, ownedGames] = await Promise.all([
         fetchWishlist(profile.steamId),
-        fetchOwnedAppIds(profile.steamId, apiKey),
+        fetchOwnedGames(profile.steamId, apiKey),
       ]);
 
-      const appIds = [...wishlist.keys()];
-      const meta = await fetchGamesMeta(appIds);
+      const wishlistIds = [...wishlist.keys()];
+      const ownedIds = [...ownedGames.keys()];
+      const keepIds = [...new Set([...wishlistIds, ...ownedIds])];
+      const missingIds = wishlistIds.filter((id) => !ownedGames.has(id));
+      const meta = await fetchGamesMeta(missingIds);
       const now = new Date();
 
-      for (const appId of appIds) {
+      for (const appId of missingIds) {
         const entry = wishlist.get(appId);
         const details = meta.get(appId);
-        const owned = ownedIds.has(Number(appId));
-
         await this.prisma.steamWishlistGame.upsert({
           where: {
             userId_appId: {
@@ -169,7 +170,7 @@ export class GamesService {
             appId,
             name: details?.name ?? `Игра ${appId}`,
             imageUrl: details?.imageUrl ?? '',
-            owned,
+            owned: false,
             priority: entry?.priority ?? 0,
             addedAt: entry?.added ? new Date(entry.added * 1000) : null,
             updatedAt: now,
@@ -177,7 +178,7 @@ export class GamesService {
           update: {
             name: details?.name ?? `Игра ${appId}`,
             imageUrl: details?.imageUrl ?? '',
-            owned,
+            owned: false,
             priority: entry?.priority ?? 0,
             addedAt: entry?.added ? new Date(entry.added * 1000) : null,
             updatedAt: now,
@@ -185,7 +186,35 @@ export class GamesService {
         });
       }
 
-      if (appIds.length === 0) {
+      for (const [appId, game] of ownedGames) {
+        await this.prisma.steamWishlistGame.upsert({
+          where: {
+            userId_appId: {
+              userId: uid,
+              appId,
+            },
+          },
+          create: {
+            userId: uid,
+            appId,
+            name: game.name,
+            imageUrl: game.imageUrl,
+            owned: true,
+            priority: 0,
+            addedAt: null,
+            updatedAt: now,
+          },
+          update: {
+            name: game.name,
+            imageUrl: game.imageUrl,
+            owned: true,
+            priority: 0,
+            updatedAt: now,
+          },
+        });
+      }
+
+      if (keepIds.length === 0) {
         await this.prisma.steamWishlistGame.deleteMany({
           where: { userId: uid },
         });
@@ -193,7 +222,7 @@ export class GamesService {
         await this.prisma.steamWishlistGame.deleteMany({
           where: {
             userId: uid,
-            appId: { notIn: appIds },
+            appId: { notIn: keepIds },
           },
         });
       }
