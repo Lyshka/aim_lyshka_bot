@@ -6,7 +6,7 @@ const emptyForm = {
   name: '',
   tabletsCount: '',
   mgPerTablet: '',
-  intervalDays: '2',
+  intervalDays: '1',
   instructions: '',
 };
 
@@ -57,7 +57,7 @@ export function SettingsScreen() {
     setCreating(true);
     setForm({
       ...emptyForm,
-      intervalDays: String(settings?.defaultInterval ?? 2),
+      intervalDays: String(settings?.defaultInterval ?? 1),
     });
     setStatus(null);
   }
@@ -97,19 +97,6 @@ export function SettingsScreen() {
     }
   }
 
-  async function saveDefaultInterval(value: number) {
-    setBusy(true);
-    try {
-      const next = await api.updateSettings(initData, { defaultInterval: value });
-      setSettings(next);
-      setStatus('Интервал по умолчанию обновлён');
-    } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Ошибка');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="space-y-5">
       <div>
@@ -118,36 +105,6 @@ export function SettingsScreen() {
           Меняй существующие препараты или добавляй свои.
         </p>
       </div>
-
-      <section
-        className="rounded-3xl px-5 py-4"
-        style={{ background: 'var(--tg-secondary)' }}
-      >
-        <p className="text-sm font-medium">Интервал по умолчанию</p>
-        <div className="mt-3 flex gap-2">
-          {[1, 2, 3, 7].map((days) => (
-            <button
-              key={days}
-              type="button"
-              disabled={busy}
-              onClick={() => void saveDefaultInterval(days)}
-              className="rounded-xl px-3 py-2 text-sm font-medium"
-              style={{
-                background:
-                  settings?.defaultInterval === days
-                    ? 'var(--tg-button)'
-                    : 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
-                color:
-                  settings?.defaultInterval === days
-                    ? 'var(--tg-button-text)'
-                    : 'var(--tg-text)',
-              }}
-            >
-              {days} дн.
-            </button>
-          ))}
-        </div>
-      </section>
 
       <button
         type="button"

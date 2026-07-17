@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type Intake, type Medication } from '../api/client';
-import { ChipSelect } from '../components/ChipSelect';
 import { CustomCheckbox } from '../components/CustomCheckbox';
 import { CustomDateField } from '../components/CustomDateField';
+import { CustomSelect } from '../components/CustomSelect';
 import { useTelegram } from '../telegram/TelegramProvider';
 
 function formatTime(value: string) {
@@ -39,13 +39,6 @@ function formatDayTitle(key: string) {
     day: 'numeric',
     month: 'long',
   }).format(date);
-}
-
-function todayInput() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 export function HistoryScreen() {
@@ -186,12 +179,6 @@ export function HistoryScreen() {
     setMedicationId('');
   }
 
-  function setToday() {
-    const value = todayInput();
-    setFrom(value);
-    setTo(value);
-  }
-
   return (
     <div className="space-y-4">
       <div>
@@ -212,10 +199,8 @@ export function HistoryScreen() {
         </div>
 
         <div>
-          <p className="mb-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Препарат
-          </p>
-          <ChipSelect
+          <CustomSelect
+            label="Препарат"
             options={medOptions}
             value={medicationId}
             onChange={setMedicationId}
@@ -225,9 +210,6 @@ export function HistoryScreen() {
         <div className="flex flex-wrap gap-2">
           <ActionButton disabled={busy} onClick={() => void load()}>
             Применить
-          </ActionButton>
-          <ActionButton disabled={busy} onClick={setToday} secondary>
-            Сегодня
           </ActionButton>
           <ActionButton disabled={busy} onClick={resetFilter} secondary>
             Сбросить

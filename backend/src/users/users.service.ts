@@ -48,7 +48,7 @@ export class UsersService {
         languageCode: payload.language_code,
         settings: {
           create: {
-            defaultInterval: 2,
+            defaultInterval: 1,
         reminderHour: 12,
         reminderMinute: 0,
             timezone: 'Europe/Moscow',

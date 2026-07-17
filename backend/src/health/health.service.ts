@@ -146,7 +146,7 @@ export class HealthService {
             create: {
               reminderHour: 12,
               reminderMinute: 0,
-              defaultInterval: 2,
+              defaultInterval: 1,
               timezone: 'Europe/Moscow',
             },
           },

@@ -228,24 +228,24 @@ export class AppsService implements OnModuleInit {
     }
 
     const users = await this.prisma.user.findMany({
-      where: /^\d+$/.test(normalized)
-        ? { id: BigInt(normalized) }
-        : {
-            username: {
-              contains: normalized,
-              mode: 'insensitive',
-            },
-          },
       include: {
         appGrants: {
           include: { app: true },
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 20,
     });
 
-    return users.map((user) => this.serializeAdminUser(user));
+    const lower = normalized.toLowerCase();
+    const filtered = users.filter((user) => {
+      const idMatch = String(user.id).includes(normalized);
+      const usernameMatch = user.username?.toLowerCase().includes(lower) ?? false;
+      const firstNameMatch = user.firstName?.toLowerCase().includes(lower) ?? false;
+      const lastNameMatch = user.lastName?.toLowerCase().includes(lower) ?? false;
+      return idMatch || usernameMatch || firstNameMatch || lastNameMatch;
+    });
+
+    return filtered.slice(0, 20).map((user) => this.serializeAdminUser(user));
   }
 
   private serializeAdminUser(user: {
@@ -297,6 +297,10 @@ export class AppsService implements OnModuleInit {
       throw new NotFoundException(
         'Пользователь не найден. Сначала он должен написать боту /start',
       );
+    }
+
+    if (!enabled && this.isAdmin(userId)) {
+      throw new ForbiddenException('Нельзя снимать доступы у администратора');
     }
 
     if (enabled) {

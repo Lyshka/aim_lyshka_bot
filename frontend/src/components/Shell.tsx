@@ -1,21 +1,30 @@
 import type { ReactNode } from 'react';
 import { useTelegram } from '../telegram/TelegramProvider';
 
-type Tab = 'home' | 'history' | 'settings';
-
-type ShellProps = {
-  tab: Tab;
-  onTabChange: (tab: Tab) => void;
-  children: ReactNode;
+type ShellTab<T extends string> = {
+  id: T;
+  label: string;
 };
 
-const tabs: { id: Tab; label: string }[] = [
+type ShellProps<T extends string> = {
+  tab: T;
+  onTabChange: (tab: T) => void;
+  children: ReactNode;
+  tabs?: ShellTab<T>[];
+};
+
+const defaultTabs: ShellTab<'home' | 'history' | 'settings'>[] = [
   { id: 'home', label: 'Сегодня' },
   { id: 'history', label: 'История' },
   { id: 'settings', label: 'Дозы' },
 ];
 
-export function Shell({ tab, onTabChange, children }: ShellProps) {
+export function Shell<T extends string>({
+  tab,
+  onTabChange,
+  children,
+  tabs = defaultTabs as ShellTab<T>[],
+}: ShellProps<T>) {
   const { haptic } = useTelegram();
 
   return (
@@ -29,7 +38,12 @@ export function Shell({ tab, onTabChange, children }: ShellProps) {
           paddingBottom: 'calc(10px + var(--safe-bottom))',
         }}
       >
-        <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+        <div
+          className="mx-auto grid max-w-md gap-1"
+          style={{
+            gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          }}
+        >
           {tabs.map((item) => {
             const active = item.id === tab;
             return (

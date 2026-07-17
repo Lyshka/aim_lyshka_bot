@@ -12,15 +12,23 @@ type AdminScreenProps = {
   onBack: () => void;
 };
 
+type AdminTab = 'search' | 'access';
+
 type PendingGrantAction = {
   userId: number;
   app: PlatformApp;
   enabled: boolean;
 };
 
+const adminTabs: { id: AdminTab; label: string }[] = [
+  { id: 'search', label: 'Поиск' },
+  { id: 'access', label: 'С доступом' },
+];
+
 export function AdminScreen({ onBack }: AdminScreenProps) {
   const { initData, haptic, refreshSession } = useTelegram();
   const [data, setData] = useState<AdminOverview | null>(null);
+  const [tab, setTab] = useState<AdminTab>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<AdminUser[]>([]);
   const [searched, setSearched] = useState(false);
@@ -117,127 +125,172 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
   }
 
   return (
-    <div className="launcher relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col overflow-hidden px-4 pt-5 pb-10">
+    <div className="launcher relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col overflow-hidden pb-24">
       <div className="launcher-orb launcher-orb-a" aria-hidden />
       <div className="launcher-orb launcher-orb-b" aria-hidden />
 
-      <div className="relative z-10 mb-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            haptic('light');
-            onBack();
-          }}
-          className="rounded-2xl px-3 py-2 text-sm font-medium"
-          style={{
-            background: 'color-mix(in srgb, white 55%, var(--tg-secondary))',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          ← Назад
-        </button>
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Админка</h1>
-          <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Поиск пользователей бота
-          </p>
-        </div>
-      </div>
-
-      <section
-        className="relative z-10 mb-4 space-y-3 rounded-[28px] px-5 py-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
-        style={{
-          background: 'color-mix(in srgb, white 70%, var(--tg-secondary))',
-          backdropFilter: 'blur(10px)',
-        }}
-      >
-        <p className="text-sm font-semibold">Поиск по ID или @нику</p>
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--tg-hint)' }}>
-          Найдутся только те, кто уже писал боту /start
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="897695033 или @username"
-            className="min-w-0 flex-1 rounded-2xl border-0 px-3 py-2.5 outline-none"
-            style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
-          />
+      <div className="relative z-10 px-4 pt-5">
+        <div className="mb-6 flex items-center gap-3">
           <button
             type="button"
-            disabled={busy}
-            onClick={() => void searchUsers()}
-            className="rounded-2xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+            onClick={() => {
+              haptic('light');
+              onBack();
+            }}
+            className="rounded-2xl px-3 py-2 text-sm font-medium"
             style={{
-              background: 'linear-gradient(145deg, #0d9488, #115e59)',
-              color: '#fff',
+              background: 'color-mix(in srgb, white 55%, var(--tg-secondary))',
+              backdropFilter: 'blur(8px)',
             }}
           >
-            Найти
+            ← Назад
           </button>
-        </div>
-      </section>
-
-      {searched ? (
-        <section className="relative z-10 mb-5 space-y-3">
-          <h2 className="font-display px-1 text-lg font-semibold">
-            Результаты поиска
-          </h2>
-          {searchResults.length === 0 ? (
-            <p className="px-1 text-sm" style={{ color: 'var(--tg-hint)' }}>
-              Никого не найдено
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Админка
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+              Пользователи и доступы
             </p>
-          ) : (
-            searchResults.map((user) => (
-              <UserGrantsCard
-                key={`search-${user.id}`}
-                user={user}
-                grantableApps={grantableApps}
-                pendingAction={pendingAction}
-                busy={busy}
-                onRequest={requestGrantAction}
-                onApply={(action) => void applyGrantAction(action)}
-                onCancel={() => {
-                  haptic('light');
-                  setPendingAction(null);
-                }}
-              />
-            ))
-          )}
-        </section>
-      ) : null}
+          </div>
+        </div>
 
-      {(data?.users ?? []).length > 0 ? (
-        <section className="relative z-10 space-y-3">
-          <h2 className="font-display px-1 text-lg font-semibold">С доступом</h2>
-          {(data?.users ?? []).map((user) => (
-            <UserGrantsCard
-              key={user.id}
-              user={user}
-              grantableApps={grantableApps}
-              pendingAction={pendingAction}
-              busy={busy}
-              onRequest={requestGrantAction}
-              onApply={(action) => void applyGrantAction(action)}
-              onCancel={() => {
-                haptic('light');
-                setPendingAction(null);
+        {tab === 'search' ? (
+          <div className="space-y-4">
+            <section
+              className="space-y-3 rounded-[28px] px-5 py-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
+              style={{
+                background: 'color-mix(in srgb, white 70%, var(--tg-secondary))',
+                backdropFilter: 'blur(10px)',
               }}
-            />
-          ))}
-        </section>
-      ) : null}
+            >
+              <p className="text-sm font-semibold">Поиск по ID или @нику</p>
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: 'var(--tg-hint)' }}
+              >
+                Можно искать по части ID, например 80 найдёт 802429313
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="80 или @username"
+                  className="min-w-0 flex-1 rounded-2xl border-0 px-3 py-2.5 outline-none"
+                  style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void searchUsers()}
+                  className="rounded-2xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+                  style={{
+                    background: 'linear-gradient(145deg, #0d9488, #115e59)',
+                    color: '#fff',
+                  }}
+                >
+                  Найти
+                </button>
+              </div>
+            </section>
 
-      {status ? (
-        <p
-          className="relative z-10 mt-4 rounded-2xl px-4 py-3 text-sm"
-          style={{
-            background: 'color-mix(in srgb, #0f766e 14%, transparent)',
-          }}
-        >
-          {status}
-        </p>
-      ) : null}
+            {searched ? (
+              <div className="space-y-3">
+                {searchResults.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                    Никого не найдено
+                  </p>
+                ) : (
+                  searchResults.map((user) => (
+                    <UserGrantsCard
+                      key={`search-${user.id}`}
+                      user={user}
+                      grantableApps={grantableApps}
+                      pendingAction={pendingAction}
+                      busy={busy}
+                      onRequest={requestGrantAction}
+                      onApply={(action) => void applyGrantAction(action)}
+                      onCancel={() => {
+                        haptic('light');
+                        setPendingAction(null);
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {tab === 'access' ? (
+          <div className="space-y-3">
+            {(data?.users ?? []).length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                Пока никому не выдан доступ
+              </p>
+            ) : (
+              (data?.users ?? []).map((user) => (
+                <UserGrantsCard
+                  key={user.id}
+                  user={user}
+                  grantableApps={grantableApps}
+                  pendingAction={pendingAction}
+                  busy={busy}
+                  onRequest={requestGrantAction}
+                  onApply={(action) => void applyGrantAction(action)}
+                  onCancel={() => {
+                    haptic('light');
+                    setPendingAction(null);
+                  }}
+                />
+              ))
+            )}
+          </div>
+        ) : null}
+
+        {status ? (
+          <p
+            className="mt-4 rounded-2xl px-4 py-3 text-sm"
+            style={{
+              background: 'color-mix(in srgb, #0f766e 14%, transparent)',
+            }}
+          >
+            {status}
+          </p>
+        ) : null}
+      </div>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-20 border-t px-3 pt-2"
+        style={{
+          background: 'var(--tg-secondary)',
+          borderColor: 'color-mix(in srgb, var(--tg-hint) 25%, transparent)',
+          paddingBottom: 'calc(10px + var(--safe-bottom))',
+        }}
+      >
+        <div className="mx-auto grid max-w-md grid-cols-2 gap-1">
+          {adminTabs.map((item) => {
+            const active = item.id === tab;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  haptic('light');
+                  setTab(item.id);
+                }}
+                className="rounded-xl px-2 py-2.5 text-sm font-medium transition"
+                style={{
+                  color: active ? 'var(--tg-button-text)' : 'var(--tg-hint)',
+                  background: active ? 'var(--tg-button)' : 'transparent',
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -331,7 +384,11 @@ function UserGrantsCard({
                 </span>
               </div>
 
-              {isPending && pending ? (
+              {user.isAdmin ? (
+                <p className="mt-3 text-xs" style={{ color: 'var(--tg-hint)' }}>
+                  У администратора доступы нельзя менять
+                </p>
+              ) : isPending && pending ? (
                 <div
                   className="mt-3 rounded-2xl px-3 py-3"
                   style={{
