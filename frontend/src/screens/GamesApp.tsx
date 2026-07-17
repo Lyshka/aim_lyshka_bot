@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   api,
   type GamesOverview,
+  type InventoryItem,
+  type InventoryOverview,
   type SteamGame,
   type SteamProfile,
 } from '../api/client';
@@ -12,12 +14,13 @@ type GamesAppProps = {
   onBack: () => void;
 };
 
-type Tab = 'home' | 'owned' | 'missing';
+type Tab = 'home' | 'owned' | 'missing' | 'inventory';
 
 const gamesTabs = [
   { id: 'home' as const, label: 'Обзор' },
   { id: 'owned' as const, label: 'Есть' },
   { id: 'missing' as const, label: 'Нет' },
+  { id: 'inventory' as const, label: 'Скины' },
 ];
 
 function formatSync(value: string | null | undefined) {
@@ -32,9 +35,21 @@ function formatSync(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function formatUsd(value: number | null | undefined) {
+  if (value == null) {
+    return '—';
+  }
+  return `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export function GamesApp({ onBack }: GamesAppProps) {
   const { initData, haptic } = useTelegram();
   const [data, setData] = useState<GamesOverview | null>(null);
+  const [inventory, setInventory] = useState<InventoryOverview | null>(null);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('home');
   const [steamInput, setSteamInput] = useState('');
@@ -50,6 +65,19 @@ export function GamesApp({ onBack }: GamesAppProps) {
     return overview;
   }, [initData]);
 
+  const loadInventory = useCallback(async () => {
+    setInventoryLoading(true);
+    try {
+      const next = await api.gamesInventory(initData);
+      setInventory(next);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка инвентаря');
+    } finally {
+      setInventoryLoading(false);
+    }
+  }, [initData]);
+
   useEffect(() => {
     let alive = true;
     load().catch((err: Error) => {
@@ -62,6 +90,13 @@ export function GamesApp({ onBack }: GamesAppProps) {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (tab !== 'inventory') {
+      return;
+    }
+    void loadInventory();
+  }, [tab, loadInventory, data?.profile?.id]);
+
   async function linkSteam() {
     if (!steamInput.trim()) {
       setStatus('Вставь ссылку или ник Steam');
@@ -73,6 +108,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
     try {
       const overview = await api.gamesLink(initData, steamInput.trim());
       setData(overview);
+      setInventory(null);
       setSteamInput('');
       setAdding(false);
       setStatus(
@@ -102,6 +138,10 @@ export function GamesApp({ onBack }: GamesAppProps) {
     try {
       const overview = await api.gamesSelect(initData, profileId);
       setData(overview);
+      setInventory(null);
+      if (tab === 'inventory') {
+        void loadInventory();
+      }
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Ошибка выбора');
     } finally {
@@ -116,6 +156,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
     try {
       const overview = await api.gamesDelete(initData, profileId);
       setData(overview);
+      setInventory(null);
       setAdding(overview.profiles.length === 0);
       setStatus('Аккаунт удалён');
     } catch (err) {
@@ -203,8 +244,20 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
                   <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <StatCard
+                    label="Скины"
+                    value={data.stats.inventoryCount}
+                    accent="#2a475e"
+                  />
+                  <StatCard
+                    label="Инвентарь"
+                    value={formatUsd(data.stats.inventoryValueUsd)}
+                    accent="#1b2838"
+                  />
+                </div>
                 <p className="px-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-                  Сумма по всем аккаунтам
+                  Сумма по всем аккаунтам · CS2
                 </p>
 
                 <section className="space-y-2">
@@ -312,7 +365,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
                 }}
               >
                 <AccountAvatar profile={data.profile} />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">
                     {data.profile.personaName}
                   </p>
@@ -320,6 +373,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
                     {tab === 'owned' ? 'Библиотека' : 'Wishlist'}
                   </p>
                 </div>
+                <ProfileLinkButton href={data.profile.profileUrl} />
               </div>
             ) : null}
 
@@ -339,6 +393,74 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   variant={tab === 'owned' ? 'owned' : 'missing'}
                 />
               ))
+            )}
+          </div>
+        ) : null}
+
+        {tab === 'inventory' ? (
+          <div className="space-y-3">
+            {data.profile ? (
+              <div
+                className="flex items-center gap-3 rounded-2xl px-3 py-2"
+                style={{
+                  background: 'color-mix(in srgb, white 70%, #1b2838)',
+                }}
+              >
+                <AccountAvatar profile={data.profile} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {data.profile.personaName}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+                    CS2 · {formatSync(inventory?.profile?.lastInventorySyncAt)}
+                  </p>
+                </div>
+                <ProfileLinkButton href={data.profile.profileUrl} />
+              </div>
+            ) : null}
+
+            {!data.profile ? (
+              <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                Сначала добавь Steam аккаунт на вкладке «Обзор»
+              </p>
+            ) : inventoryLoading && !inventory ? (
+              <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                Загружаем инвентарь и цены…
+              </p>
+            ) : inventory?.hidden ? (
+              <section
+                className="rounded-3xl px-5 py-4 text-sm"
+                style={{
+                  background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
+                  color: '#9f1239',
+                }}
+              >
+                Инвентарь скрыт в настройках Steam. Сделай профиль и инвентарь CS2
+                публичными, затем открой вкладку снова.
+              </section>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <StatCard
+                    label="Предметов"
+                    value={inventory?.itemsCount ?? 0}
+                  />
+                  <StatCard
+                    label="Сумма"
+                    value={formatUsd(inventory?.totalValueUsd ?? 0)}
+                    accent="#1b2838"
+                  />
+                </div>
+                {(inventory?.items.length ?? 0) === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                    Инвентарь CS2 пуст или ещё не загрузился
+                  </p>
+                ) : (
+                  inventory?.items.map((item) => (
+                    <InventoryCard key={item.id} item={item} />
+                  ))
+                )}
+              </>
             )}
           </div>
         ) : null}
@@ -377,6 +499,27 @@ function AccountAvatar({ profile }: { profile: SteamProfile }) {
   );
 }
 
+function ProfileLinkButton({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Открыть профиль Steam"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+      style={{
+        background: 'color-mix(in srgb, #1b2838 88%, #66c0f4)',
+        color: '#c7d5e0',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+        <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z" />
+      </svg>
+    </a>
+  );
+}
+
 function AccountCard({
   profile,
   busy,
@@ -398,26 +541,49 @@ function AccountCard({
         outline: profile.active ? '2px solid #66c0f4' : 'none',
       }}
     >
-      <button
-        type="button"
-        disabled={busy || profile.active}
-        onClick={onSelect}
-        className="flex w-full items-center gap-3 text-left disabled:opacity-100"
-      >
-        <AccountAvatar profile={profile} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{profile.personaName}</p>
-          <p className="truncate text-xs" style={{ color: 'var(--tg-hint)' }}>
-            {profile.active ? 'Выбран' : 'Нажми, чтобы выбрать'} ·{' '}
-            {formatSync(profile.lastSyncAt)}
-          </p>
-        </div>
-      </button>
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          disabled={busy || profile.active}
+          onClick={onSelect}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-100"
+        >
+          <AccountAvatar profile={profile} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{profile.personaName}</p>
+            <p className="truncate text-xs" style={{ color: 'var(--tg-hint)' }}>
+              {profile.active ? 'Выбран' : 'Нажми, чтобы выбрать'} ·{' '}
+              {formatSync(profile.lastSyncAt)}
+            </p>
+          </div>
+        </button>
+        <ProfileLinkButton href={profile.profileUrl} />
+      </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <MiniStat label="Всего" value={profile.stats.total} />
         <MiniStat label="Есть" value={profile.stats.owned} accent="#16a34a" />
         <MiniStat label="Нет" value={profile.stats.missing} accent="#dc2626" />
+      </div>
+
+      <div
+        className="mt-2 rounded-xl px-3 py-2"
+        style={{
+          background: 'color-mix(in srgb, white 55%, transparent)',
+        }}
+      >
+        {profile.inventoryHidden ? (
+          <p className="text-xs font-medium" style={{ color: '#b42318' }}>
+            Инвентарь скрыт
+          </p>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+              CS2 · {profile.stats.inventoryCount} шт.
+            </p>
+            <p className="text-sm font-semibold">{formatUsd(profile.stats.inventoryValueUsd)}</p>
+          </div>
+        )}
       </div>
 
       <button
@@ -471,7 +637,7 @@ function StatCard({
   accent,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   accent?: string;
 }) {
   return (
@@ -488,7 +654,7 @@ function StatCard({
         {label}
       </p>
       <p
-        className="font-display mt-2 text-2xl font-semibold"
+        className="font-display mt-2 text-xl font-semibold leading-tight"
         style={{ color: accent ?? 'var(--tg-text)' }}
       >
         {value}
@@ -558,5 +724,54 @@ function GameCard({
         </p>
       </div>
     </a>
+  );
+}
+
+function InventoryIcon({ src }: { src: string }) {
+  const [broken, setBroken] = useState(!src);
+  return (
+    <div
+      className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+      style={{
+        background: 'linear-gradient(145deg, #1b2838, #2a475e)',
+      }}
+    >
+      {!broken && src ? (
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-contain p-1"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span className="text-xs font-bold" style={{ color: '#66c0f4' }}>
+          CS
+        </span>
+      )}
+    </div>
+  );
+}
+
+function InventoryCard({ item }: { item: InventoryItem }) {
+  return (
+    <article
+      className="flex gap-3 overflow-hidden rounded-[24px] p-2 pr-3"
+      style={{
+        background: 'color-mix(in srgb, white 75%, #1b2838)',
+      }}
+    >
+      <InventoryIcon src={item.iconUrl} />
+      <div className="min-w-0 flex-1 py-1">
+        <p className="line-clamp-2 text-sm font-semibold leading-snug">{item.name}</p>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+            {item.amount > 1 ? `×${item.amount}` : item.marketable ? 'Рынок' : 'Не продаётся'}
+          </p>
+          <p className="shrink-0 text-sm font-semibold">
+            {formatUsd(item.totalUsd ?? item.priceUsd)}
+          </p>
+        </div>
+      </div>
+    </article>
   );
 }

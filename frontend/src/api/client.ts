@@ -201,10 +201,14 @@ export type SteamProfile = {
   active: boolean;
   profileUrl: string;
   lastSyncAt: string | null;
+  lastInventorySyncAt: string | null;
+  inventoryHidden: boolean;
   stats: {
     total: number;
     owned: number;
     missing: number;
+    inventoryValueUsd: number;
+    inventoryCount: number;
   };
 };
 
@@ -216,9 +220,30 @@ export type GamesOverview = {
     total: number;
     owned: number;
     missing: number;
+    inventoryValueUsd: number;
+    inventoryCount: number;
   };
   owned: SteamGame[];
   missing: SteamGame[];
+};
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  marketHashName: string;
+  iconUrl: string;
+  amount: number;
+  marketable: boolean;
+  priceUsd: number | null;
+  totalUsd: number | null;
+};
+
+export type InventoryOverview = {
+  profile: SteamProfile | null;
+  hidden: boolean;
+  totalValueUsd: number;
+  itemsCount: number;
+  items: InventoryItem[];
 };
 
 export const api = {
@@ -282,6 +307,11 @@ export const api = {
     request<GamesOverview>('/api/games/delete', {
       method: 'POST',
       body: JSON.stringify({ initData, profileId }),
+    }),
+  gamesInventory: (initData: string) =>
+    request<InventoryOverview>('/api/games/inventory', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
     }),
   healthManual: (
     initData: string,

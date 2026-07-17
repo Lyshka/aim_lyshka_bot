@@ -7,12 +7,15 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  fetchCs2Inventory,
   fetchGamesMeta,
+  fetchMarketPriceUsd,
   fetchOwnedGames,
   fetchPlayerSummary,
   fetchWishlist,
   parseSteamInput,
   resolveSteamId,
+  sleep,
 } from './games.steam';
 
 function serializeProfile(
@@ -24,8 +27,16 @@ function serializeProfile(
     avatarUrl: string;
     active: boolean;
     lastSyncAt: Date | null;
+    lastInventorySyncAt?: Date | null;
+    inventoryHidden?: boolean;
   },
-  stats?: { total: number; owned: number; missing: number },
+  stats?: {
+    total: number;
+    owned: number;
+    missing: number;
+    inventoryValueUsd: number;
+    inventoryCount: number;
+  },
 ) {
   return {
     id: profile.id,
@@ -38,7 +49,15 @@ function serializeProfile(
       ? `https://steamcommunity.com/id/${profile.vanityUrl}`
       : `https://steamcommunity.com/profiles/${profile.steamId}`,
     lastSyncAt: profile.lastSyncAt?.toISOString() ?? null,
-    stats: stats ?? { total: 0, owned: 0, missing: 0 },
+    lastInventorySyncAt: profile.lastInventorySyncAt?.toISOString() ?? null,
+    inventoryHidden: Boolean(profile.inventoryHidden),
+    stats: stats ?? {
+      total: 0,
+      owned: 0,
+      missing: 0,
+      inventoryValueUsd: 0,
+      inventoryCount: 0,
+    },
   };
 }
 
@@ -110,10 +129,22 @@ export class GamesService {
 
       const statsByProfile = new Map<
         string,
-        { total: number; owned: number; missing: number }
+        {
+          total: number;
+          owned: number;
+          missing: number;
+          inventoryValueUsd: number;
+          inventoryCount: number;
+        }
       >();
       for (const profile of profiles) {
-        statsByProfile.set(profile.id, { total: 0, owned: 0, missing: 0 });
+        statsByProfile.set(profile.id, {
+          total: 0,
+          owned: 0,
+          missing: 0,
+          inventoryValueUsd: 0,
+          inventoryCount: 0,
+        });
       }
       for (const game of allGames) {
         const stats = statsByProfile.get(game.steamProfileId);
@@ -128,16 +159,45 @@ export class GamesService {
         }
       }
 
+      const inventoryRows = await this.prisma.steamInventoryItem.findMany({
+        where: { steamProfileId: { in: profiles.map((p) => p.id) } },
+        select: {
+          steamProfileId: true,
+          amount: true,
+          priceUsd: true,
+        },
+      });
+      for (const row of inventoryRows) {
+        const stats = statsByProfile.get(row.steamProfileId);
+        if (!stats) {
+          continue;
+        }
+        stats.inventoryCount += row.amount;
+        if (row.priceUsd != null) {
+          stats.inventoryValueUsd += row.priceUsd * row.amount;
+        }
+      }
+      for (const stats of statsByProfile.values()) {
+        stats.inventoryValueUsd =
+          Math.round(stats.inventoryValueUsd * 100) / 100;
+      }
+
       const aggregate = {
         total: 0,
         owned: 0,
         missing: 0,
+        inventoryValueUsd: 0,
+        inventoryCount: 0,
       };
       for (const stats of statsByProfile.values()) {
         aggregate.total += stats.total;
         aggregate.owned += stats.owned;
         aggregate.missing += stats.missing;
+        aggregate.inventoryValueUsd += stats.inventoryValueUsd;
+        aggregate.inventoryCount += stats.inventoryCount;
       }
+      aggregate.inventoryValueUsd =
+        Math.round(aggregate.inventoryValueUsd * 100) / 100;
 
       const games = active
         ? await this.prisma.steamWishlistGame.findMany({
@@ -379,6 +439,219 @@ export class GamesService {
         avatarUrl: summary.avatarUrl,
       },
     });
+
+    try {
+      await this.syncInventory(profile.id, profile.steamId);
+    } catch {
+      //
+    }
+  }
+
+  async syncInventory(profileId: string, steamId: string) {
+    const result = await fetchCs2Inventory(steamId);
+    const now = new Date();
+
+    if (result.hidden) {
+      await this.prisma.steamInventoryItem.deleteMany({
+        where: { steamProfileId: profileId },
+      });
+      await this.prisma.steamProfile.update({
+        where: { id: profileId },
+        data: {
+          inventoryHidden: true,
+          lastInventorySyncAt: now,
+        },
+      });
+      return;
+    }
+
+    const names = [
+      ...new Set(
+        result.items
+          .filter((item) => item.marketable && item.marketHashName)
+          .map((item) => item.marketHashName),
+      ),
+    ];
+
+    const priceMap = new Map<string, number | null>();
+    const staleBefore = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    const cached = await this.prisma.steamMarketPrice.findMany({
+      where: { marketHashName: { in: names } },
+    });
+    for (const row of cached) {
+      if (row.updatedAt >= staleBefore) {
+        priceMap.set(row.marketHashName, row.priceUsd);
+      }
+    }
+
+    for (const name of names) {
+      if (priceMap.has(name)) {
+        continue;
+      }
+      const price = await fetchMarketPriceUsd(name);
+      priceMap.set(name, price);
+      await this.prisma.steamMarketPrice.upsert({
+        where: { marketHashName: name },
+        create: {
+          marketHashName: name,
+          priceUsd: price,
+          updatedAt: now,
+        },
+        update: {
+          priceUsd: price,
+          updatedAt: now,
+        },
+      });
+      await sleep(350);
+    }
+
+    const keepAssetIds: string[] = [];
+    for (const item of result.items) {
+      keepAssetIds.push(item.assetId);
+      const priceUsd =
+        item.marketable && item.marketHashName
+          ? (priceMap.get(item.marketHashName) ?? null)
+          : null;
+
+      await this.prisma.steamInventoryItem.upsert({
+        where: {
+          steamProfileId_assetId: {
+            steamProfileId: profileId,
+            assetId: item.assetId,
+          },
+        },
+        create: {
+          steamProfileId: profileId,
+          assetId: item.assetId,
+          classId: item.classId,
+          instanceId: item.instanceId,
+          name: item.name,
+          marketHashName: item.marketHashName,
+          iconUrl: item.iconUrl,
+          amount: item.amount,
+          marketable: item.marketable,
+          priceUsd,
+          updatedAt: now,
+        },
+        update: {
+          classId: item.classId,
+          instanceId: item.instanceId,
+          name: item.name,
+          marketHashName: item.marketHashName,
+          iconUrl: item.iconUrl,
+          amount: item.amount,
+          marketable: item.marketable,
+          priceUsd,
+          updatedAt: now,
+        },
+      });
+    }
+
+    if (keepAssetIds.length === 0) {
+      await this.prisma.steamInventoryItem.deleteMany({
+        where: { steamProfileId: profileId },
+      });
+    } else {
+      await this.prisma.steamInventoryItem.deleteMany({
+        where: {
+          steamProfileId: profileId,
+          assetId: { notIn: keepAssetIds },
+        },
+      });
+    }
+
+    await this.prisma.steamProfile.update({
+      where: { id: profileId },
+      data: {
+        inventoryHidden: false,
+        lastInventorySyncAt: now,
+      },
+    });
+  }
+
+  async getInventory(userId: number) {
+    try {
+      const uid = BigInt(userId);
+      const profile = await this.prisma.steamProfile.findFirst({
+        where: { userId: uid, active: true },
+      });
+      const active =
+        profile ??
+        (await this.prisma.steamProfile.findFirst({
+          where: { userId: uid },
+          orderBy: { createdAt: 'asc' },
+        }));
+
+      if (!active) {
+        return {
+          profile: null,
+          hidden: false,
+          totalValueUsd: 0,
+          itemsCount: 0,
+          items: [],
+        };
+      }
+
+      const stale =
+        !active.lastInventorySyncAt ||
+        Date.now() - active.lastInventorySyncAt.getTime() >
+          12 * 60 * 60 * 1000;
+
+      if (stale) {
+        try {
+          await this.syncInventory(active.id, active.steamId);
+        } catch {
+          //
+        }
+      }
+
+      const fresh = await this.prisma.steamProfile.findUnique({
+        where: { id: active.id },
+      });
+      const items = await this.prisma.steamInventoryItem.findMany({
+        where: { steamProfileId: active.id },
+        orderBy: [{ priceUsd: 'desc' }, { name: 'asc' }],
+      });
+
+      let totalValueUsd = 0;
+      for (const item of items) {
+        if (item.priceUsd != null) {
+          totalValueUsd += item.priceUsd * item.amount;
+        }
+      }
+      totalValueUsd = Math.round(totalValueUsd * 100) / 100;
+      const itemsCount = items.reduce((sum, i) => sum + i.amount, 0);
+
+      return {
+        profile: fresh
+          ? serializeProfile(fresh, {
+              total: 0,
+              owned: 0,
+              missing: 0,
+              inventoryValueUsd: totalValueUsd,
+              inventoryCount: itemsCount,
+            })
+          : null,
+        hidden: Boolean(fresh?.inventoryHidden),
+        totalValueUsd,
+        itemsCount,
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          marketHashName: item.marketHashName,
+          iconUrl: item.iconUrl,
+          amount: item.amount,
+          marketable: item.marketable,
+          priceUsd: item.priceUsd,
+          totalUsd:
+            item.priceUsd != null
+              ? Math.round(item.priceUsd * item.amount * 100) / 100
+              : null,
+        })),
+      };
+    } catch (err) {
+      this.rethrowDbError(err);
+    }
   }
 
   @Cron('15 6 * * *', { timeZone: 'Europe/Moscow' })
@@ -407,7 +680,8 @@ export class GamesService {
     if (
       code === 'P2021' ||
       message.includes('SteamProfile') ||
-      message.includes('SteamWishlistGame')
+      message.includes('SteamWishlistGame') ||
+      message.includes('SteamInventoryItem')
     ) {
       throw new BadRequestException(
         'Таблицы игр не созданы. Перезапусти backend — миграция должна примениться автоматически.',

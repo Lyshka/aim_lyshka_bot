@@ -45,4 +45,13 @@ export class GamesController {
     );
     return this.gamesService.deleteProfile(session.user.id, dto.profileId);
   }
+
+  @Post('inventory')
+  async inventory(@Body() dto: GamesInitDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'games',
+    );
+    return this.gamesService.getInventory(session.user.id);
+  }
 }

@@ -152,18 +152,21 @@ model HealthDay {
 }
 
 model SteamProfile {
-  id          String              @id @default(cuid())
-  userId      BigInt
-  steamId     String
-  vanityUrl   String?
-  personaName String              @default("")
-  avatarUrl   String              @default("")
-  active      Boolean             @default(false)
-  lastSyncAt  DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  games       SteamWishlistGame[]
+  id                   String               @id @default(cuid())
+  userId               BigInt
+  steamId              String
+  vanityUrl            String?
+  personaName          String               @default("")
+  avatarUrl            String               @default("")
+  active               Boolean              @default(false)
+  lastSyncAt           DateTime?
+  lastInventorySyncAt  DateTime?
+  inventoryHidden      Boolean              @default(false)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  games                SteamWishlistGame[]
+  inventory            SteamInventoryItem[]
 
   @@unique([userId, steamId])
   @@index([userId])
@@ -189,4 +192,30 @@ model SteamWishlistGame {
   @@index([userId, owned])
   @@index([steamProfileId, owned])
   @@index([steamProfileId, priority])
+}
+
+model SteamInventoryItem {
+  id             String       @id @default(cuid())
+  steamProfileId String
+  assetId        String
+  classId        String
+  instanceId     String       @default("")
+  name           String
+  marketHashName String       @default("")
+  iconUrl        String       @default("")
+  amount         Int          @default(1)
+  marketable     Boolean      @default(false)
+  priceUsd       Float?
+  updatedAt      DateTime     @updatedAt
+  steamProfile   SteamProfile @relation(fields: [steamProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([steamProfileId, assetId])
+  @@index([steamProfileId])
+  @@index([steamProfileId, marketable])
+}
+
+model SteamMarketPrice {
+  marketHashName String   @id
+  priceUsd       Float?
+  updatedAt      DateTime @updatedAt
 }

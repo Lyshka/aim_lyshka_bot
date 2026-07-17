@@ -323,6 +323,193 @@ async function fetchPlayerSummary(
   };
 }
 
+type InventoryItemRaw = {
+  assetId: string;
+  classId: string;
+  instanceId: string;
+  name: string;
+  marketHashName: string;
+  iconUrl: string;
+  amount: number;
+  marketable: boolean;
+};
+
+type InventoryPage = {
+  assets?: {
+    assetid?: string;
+    classid?: string;
+    instanceid?: string;
+    amount?: string;
+  }[];
+  descriptions?: {
+    classid?: string;
+    instanceid?: string;
+    name?: string;
+    market_name?: string;
+    market_hash_name?: string;
+    icon_url?: string;
+    marketable?: number;
+  }[];
+  more_items?: number;
+  last_assetid?: string;
+  success?: number | boolean;
+  total_inventory_count?: number;
+};
+
+function economyImage(iconPath: string) {
+  if (!iconPath) {
+    return '';
+  }
+  if (iconPath.startsWith('http')) {
+    return iconPath;
+  }
+  return `https://community.cloudflare.steamstatic.com/economy/image/${iconPath}`;
+}
+
+async function fetchCs2Inventory(steamId: string): Promise<{
+  hidden: boolean;
+  items: InventoryItemRaw[];
+}> {
+  const items: InventoryItemRaw[] = [];
+  let startAssetId: string | undefined;
+  let guard = 0;
+
+  while (guard < 20) {
+    guard += 1;
+    const params = new URLSearchParams({
+      l: 'russian',
+      count: '2000',
+    });
+    if (startAssetId) {
+      params.set('start_assetid', startAssetId);
+    }
+
+    const response = await fetch(
+      `https://steamcommunity.com/inventory/${steamId}/730/2?${params.toString()}`,
+      {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+        },
+      },
+    );
+
+    if (response.status === 403 || response.status === 401) {
+      return { hidden: true, items: [] };
+    }
+
+    if (response.status === 404) {
+      return { hidden: false, items: [] };
+    }
+
+    if (!response.ok) {
+      throw new ForbiddenException('Не удалось загрузить инвентарь Steam');
+    }
+
+    const raw = await response.text();
+    if (!raw.trim() || raw.trim() === 'null') {
+      return { hidden: true, items: [] };
+    }
+
+    let page: InventoryPage;
+    try {
+      page = JSON.parse(raw) as InventoryPage;
+    } catch {
+      return { hidden: true, items: [] };
+    }
+
+    if (page.success === false || page.success === 0) {
+      return { hidden: true, items: [] };
+    }
+
+    const descriptions = new Map<string, NonNullable<InventoryPage['descriptions']>[number]>();
+    for (const desc of page.descriptions ?? []) {
+      if (!desc.classid) {
+        continue;
+      }
+      descriptions.set(`${desc.classid}_${desc.instanceid ?? '0'}`, desc);
+    }
+
+    for (const asset of page.assets ?? []) {
+      if (!asset.assetid || !asset.classid) {
+        continue;
+      }
+      const desc =
+        descriptions.get(`${asset.classid}_${asset.instanceid ?? '0'}`) ??
+        descriptions.get(`${asset.classid}_0`);
+      const amount = Math.max(1, Number(asset.amount ?? '1') || 1);
+      items.push({
+        assetId: asset.assetid,
+        classId: asset.classid,
+        instanceId: asset.instanceid ?? '0',
+        name: desc?.name || desc?.market_name || `Предмет ${asset.classid}`,
+        marketHashName: desc?.market_hash_name || '',
+        iconUrl: economyImage(desc?.icon_url ?? ''),
+        amount,
+        marketable: Boolean(desc?.marketable),
+      });
+    }
+
+    if (!page.more_items || !page.last_assetid) {
+      break;
+    }
+    startAssetId = page.last_assetid;
+  }
+
+  return { hidden: false, items };
+}
+
+async function fetchMarketPriceUsd(
+  marketHashName: string,
+): Promise<number | null> {
+  if (!marketHashName) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    appid: '730',
+    currency: '1',
+    market_hash_name: marketHashName,
+  });
+
+  const response = await fetch(
+    `https://steamcommunity.com/market/priceoverview/?${params.toString()}`,
+    {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+      },
+    },
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    lowest_price?: string;
+    median_price?: string;
+  };
+
+  if (!data.success) {
+    return null;
+  }
+
+  const raw = data.lowest_price || data.median_price;
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.replace(/[^0-9.]/g, '');
+  const value = Number(normalized);
+  return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export {
   parseSteamInput,
   resolveSteamId,
@@ -330,5 +517,8 @@ export {
   fetchWishlist,
   fetchGamesMeta,
   fetchPlayerSummary,
+  fetchCs2Inventory,
+  fetchMarketPriceUsd,
+  sleep,
   headerImage,
 };
