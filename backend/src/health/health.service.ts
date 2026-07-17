@@ -18,17 +18,8 @@ type HealthPatch = {
   boneMassKg?: number;
   bmi?: number;
   heightCm?: number;
-  distanceKm?: number;
-  flightsClimbed?: number;
-  restingEnergyKcal?: number;
-  activeEnergyKcal?: number;
   walkingSpeedKmh?: number;
   walkingStepLengthCm?: number;
-  walkingAsymmetryPercent?: number;
-  doubleSupportPercent?: number;
-  walkingSteadiness?: string;
-  headphoneLevel?: string;
-  sleepScore?: number;
   source?: string;
 };
 
@@ -59,17 +50,6 @@ function pickInt(
   return existing ?? null;
 }
 
-function pickText(
-  incoming: string | undefined,
-  existing: string | null | undefined,
-): string | null {
-  if (incoming !== undefined) {
-    const value = incoming.trim();
-    return value || null;
-  }
-  return existing ?? null;
-}
-
 function serializeDay(row: {
   id: string;
   day: string;
@@ -82,17 +62,8 @@ function serializeDay(row: {
   boneMassKg: number | null;
   bmi: number | null;
   heightCm: number | null;
-  distanceKm: number | null;
-  flightsClimbed: number | null;
-  restingEnergyKcal: number | null;
-  activeEnergyKcal: number | null;
   walkingSpeedKmh: number | null;
   walkingStepLengthCm: number | null;
-  walkingAsymmetryPercent: number | null;
-  doubleSupportPercent: number | null;
-  walkingSteadiness: string | null;
-  headphoneLevel: string | null;
-  sleepScore: number | null;
   source: string;
   updatedAt: Date;
 }) {
@@ -108,17 +79,8 @@ function serializeDay(row: {
     boneMassKg: round2(row.boneMassKg),
     bmi: round2(row.bmi),
     heightCm: round2(row.heightCm),
-    distanceKm: round2(row.distanceKm),
-    flightsClimbed: round2(row.flightsClimbed),
-    restingEnergyKcal: round2(row.restingEnergyKcal),
-    activeEnergyKcal: round2(row.activeEnergyKcal),
     walkingSpeedKmh: round2(row.walkingSpeedKmh),
     walkingStepLengthCm: round2(row.walkingStepLengthCm),
-    walkingAsymmetryPercent: round2(row.walkingAsymmetryPercent),
-    doubleSupportPercent: round2(row.doubleSupportPercent),
-    walkingSteadiness: row.walkingSteadiness,
-    headphoneLevel: row.headphoneLevel,
-    sleepScore: round2(row.sleepScore),
     source: row.source,
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -215,16 +177,6 @@ export class HealthService {
       boneMassKg: pickNumber(data.boneMassKg, existing?.boneMassKg),
       bmi: pickNumber(data.bmi, existing?.bmi),
       heightCm: pickNumber(data.heightCm, existing?.heightCm),
-      distanceKm: pickNumber(data.distanceKm, existing?.distanceKm),
-      flightsClimbed: pickNumber(data.flightsClimbed, existing?.flightsClimbed),
-      restingEnergyKcal: pickNumber(
-        data.restingEnergyKcal,
-        existing?.restingEnergyKcal,
-      ),
-      activeEnergyKcal: pickNumber(
-        data.activeEnergyKcal,
-        existing?.activeEnergyKcal,
-      ),
       walkingSpeedKmh: pickNumber(
         data.walkingSpeedKmh,
         existing?.walkingSpeedKmh,
@@ -233,20 +185,6 @@ export class HealthService {
         data.walkingStepLengthCm,
         existing?.walkingStepLengthCm,
       ),
-      walkingAsymmetryPercent: pickNumber(
-        data.walkingAsymmetryPercent,
-        existing?.walkingAsymmetryPercent,
-      ),
-      doubleSupportPercent: pickNumber(
-        data.doubleSupportPercent,
-        existing?.doubleSupportPercent,
-      ),
-      walkingSteadiness: pickText(
-        data.walkingSteadiness,
-        existing?.walkingSteadiness,
-      ),
-      headphoneLevel: pickText(data.headphoneLevel, existing?.headphoneLevel),
-      sleepScore: pickNumber(data.sleepScore, existing?.sleepScore),
       source: data.source ?? existing?.source ?? 'manual',
     };
 

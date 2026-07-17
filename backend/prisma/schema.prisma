@@ -129,17 +129,8 @@ model HealthDay {
   boneMassKg               Float?
   bmi                      Float?
   heightCm                 Float?
-  distanceKm               Float?
-  flightsClimbed           Float?
-  restingEnergyKcal        Float?
-  activeEnergyKcal         Float?
   walkingSpeedKmh          Float?
   walkingStepLengthCm      Float?
-  walkingAsymmetryPercent  Float?
-  doubleSupportPercent     Float?
-  walkingSteadiness        String?
-  headphoneLevel           String?
-  sleepScore               Float?
   source                   String   @default("manual")
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt

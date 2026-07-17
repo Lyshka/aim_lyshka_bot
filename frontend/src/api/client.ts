@@ -138,17 +138,8 @@ export type HealthDay = {
   boneMassKg: number | null;
   bmi: number | null;
   heightCm: number | null;
-  distanceKm: number | null;
-  flightsClimbed: number | null;
-  restingEnergyKcal: number | null;
-  activeEnergyKcal: number | null;
   walkingSpeedKmh: number | null;
   walkingStepLengthCm: number | null;
-  walkingAsymmetryPercent: number | null;
-  doubleSupportPercent: number | null;
-  walkingSteadiness: string | null;
-  headphoneLevel: string | null;
-  sleepScore: number | null;
   source: string;
   updatedAt: string;
 };

@@ -95,34 +95,6 @@ export class HealthIngestDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(200)
-  @Type(() => Number)
-  distanceKm?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(500)
-  @Type(() => Number)
-  flightsClimbed?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(10000)
-  @Type(() => Number)
-  restingEnergyKcal?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(10000)
-  @Type(() => Number)
-  activeEnergyKcal?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
   @Max(30)
   @Type(() => Number)
   walkingSpeedKmh?: number;
@@ -133,35 +105,6 @@ export class HealthIngestDto {
   @Max(200)
   @Type(() => Number)
   walkingStepLengthCm?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @Type(() => Number)
-  walkingAsymmetryPercent?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @Type(() => Number)
-  doubleSupportPercent?: number;
-
-  @IsOptional()
-  @IsString()
-  walkingSteadiness?: string;
-
-  @IsOptional()
-  @IsString()
-  headphoneLevel?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @Type(() => Number)
-  sleepScore?: number;
 
   @IsOptional()
   @IsString()

@@ -1,0 +1,9 @@
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "distanceKm";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "flightsClimbed";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "restingEnergyKcal";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "activeEnergyKcal";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "walkingAsymmetryPercent";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "doubleSupportPercent";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "walkingSteadiness";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "headphoneLevel";
+ALTER TABLE "HealthDay" DROP COLUMN IF EXISTS "sleepScore";

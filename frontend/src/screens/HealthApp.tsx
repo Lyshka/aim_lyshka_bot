@@ -184,25 +184,6 @@ export function HealthApp({ onBack }: HealthAppProps) {
           value={fmt(today?.leanBodyMassKg, 2)}
           suffix="кг"
         />
-        <Metric label="Дистанция" value={fmt(today?.distanceKm, 2)} suffix="км" />
-        <Metric
-          label="Пролёты"
-          value={
-            today?.flightsClimbed != null
-              ? String(Math.round(today.flightsClimbed))
-              : null
-          }
-        />
-        <Metric
-          label="Энергия покоя"
-          value={fmt(today?.restingEnergyKcal, 0)}
-          suffix="ккал"
-        />
-        <Metric
-          label="Активность"
-          value={fmt(today?.activeEnergyKcal, 2)}
-          suffix="ккал"
-        />
         <Metric
           label="Скорость ходьбы"
           value={fmt(today?.walkingSpeedKmh, 1)}
@@ -213,19 +194,6 @@ export function HealthApp({ onBack }: HealthAppProps) {
           value={fmt(today?.walkingStepLengthCm, 0)}
           suffix="см"
         />
-        <Metric
-          label="Асимметрия"
-          value={fmt(today?.walkingAsymmetryPercent, 2)}
-          suffix="%"
-        />
-        <Metric
-          label="Двойная опора"
-          value={fmt(today?.doubleSupportPercent, 0)}
-          suffix="%"
-        />
-        <Metric label="Устойчивость" value={today?.walkingSteadiness} />
-        <Metric label="Наушники" value={today?.headphoneLevel} />
-        <Metric label="Сон" value={fmt(today?.sleepScore, 0)} />
         <Metric label="Вода %" value={fmt(today?.waterPercent, 1)} />
       </div>
 
@@ -336,7 +304,6 @@ function HistoryRow({ row }: { row: HealthDay }) {
             ? `безжир. ${fmt(row.leanBodyMassKg, 2)} кг`
             : null,
           row.heightCm != null ? `рост ${fmt(row.heightCm, 0)} см` : null,
-          row.distanceKm != null ? `${fmt(row.distanceKm, 2)} км` : null,
         ]
           .filter(Boolean)
           .join(' · ') || 'нет доп. метрик'}
