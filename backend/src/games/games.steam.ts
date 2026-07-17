@@ -28,6 +28,16 @@ type WishlistEntry = {
   added?: number;
 };
 
+type WishlistApiResponse = {
+  response?: {
+    items?: {
+      appid?: number;
+      priority?: number;
+      date_added?: number;
+    }[];
+  };
+};
+
 type AppDetailsResponse = {
   [appId: string]: {
     success?: boolean;
@@ -158,10 +168,10 @@ async function fetchWishlist(
   steamId: string,
 ): Promise<Map<string, WishlistEntry>> {
   const response = await fetch(
-    `https://store.steampowered.com/wishlist/profiles/${steamId}/wishlistdata/`,
+    `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${encodeURIComponent(steamId)}`,
     {
       headers: {
-        Accept: 'application/json,text/plain,*/*',
+        Accept: 'application/json',
         'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
       },
     },
@@ -182,26 +192,25 @@ async function fetchWishlist(
     return new Map();
   }
 
-  let data: unknown;
+  let data: WishlistApiResponse;
   try {
-    data = JSON.parse(raw);
+    data = JSON.parse(raw) as WishlistApiResponse;
   } catch {
     throw new ForbiddenException(
       'Steam вернул некорректный ответ. Проверь, что профиль и wishlist публичные.',
     );
   }
 
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return new Map();
-  }
-
+  const items = data.response?.items ?? [];
   const map = new Map<string, WishlistEntry>();
-  for (const [appId, entry] of Object.entries(
-    data as Record<string, WishlistEntry>,
-  )) {
-    if (/^\d+$/.test(appId) && entry && typeof entry === 'object') {
-      map.set(appId, entry);
+  for (const item of items) {
+    if (!item?.appid) {
+      continue;
     }
+    map.set(String(item.appid), {
+      priority: item.priority ?? 0,
+      added: item.date_added,
+    });
   }
   return map;
 }
