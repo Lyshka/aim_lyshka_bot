@@ -59,24 +59,18 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     return (
       <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
         <path
-          d="M10 18.5 16 8l5 7.5h6L32 8l6 10.5v11c0 7.5-5.5 13.5-14 13.5S10 37 10 29.5v-11Z"
+          d="M12 19 17.5 6.5 21 16h6l3.5-9.5L36 19v10.5c0 6.2-5.2 11.5-12 11.5S12 35.7 12 29.5V19Z"
           fill="currentColor"
         />
-        <circle cx="18.5" cy="23" r="2.1" fill="#fff" />
-        <circle cx="29.5" cy="23" r="2.1" fill="#fff" />
+        <circle cx="19" cy="23.5" r="2.4" fill="#fff" />
+        <circle cx="29" cy="23.5" r="2.4" fill="#fff" />
+        <path d="M24 26.5 21.8 29.2h4.4L24 26.5Z" fill="#fff" />
         <path
-          d="M24 26.5c1.4 1.4 3.2 1.4 4.6 0"
+          d="M14.8 28.5h4M29.2 28.5h4"
           stroke="#fff"
-          strokeWidth="1.8"
+          strokeWidth="1.7"
           strokeLinecap="round"
-          opacity="0.85"
-        />
-        <path
-          d="M15 28.5h4M29 28.5h4"
-          stroke="#fff"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          opacity="0.7"
+          opacity="0.8"
         />
       </svg>
     );
@@ -103,18 +97,25 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
   if (slug === 'games') {
     return (
       <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
-        <path
-          d="M10 20.5c0-3.6 2.9-6.5 6.5-6.5h15c3.6 0 6.5 2.9 6.5 6.5v7c0 3.6-2.9 6.5-6.5 6.5h-2.2l-3.3 4.4a1.5 1.5 0 0 1-2.4 0L20.3 34H16.5C12.9 34 10 31.1 10 27.5v-7Z"
+        <rect
+          x="7"
+          y="18"
+          width="20"
+          height="20"
+          rx="4"
           fill="currentColor"
+          opacity="0.55"
         />
-        <path
-          d="M17.5 24h5M20 21.5v5"
-          stroke="#fff"
-          strokeWidth="2.3"
-          strokeLinecap="round"
-        />
-        <circle cx="29.2" cy="22.2" r="1.7" fill="#fff" />
-        <circle cx="32.5" cy="25.8" r="1.7" fill="#fff" />
+        <circle cx="13.2" cy="24.2" r="1.7" fill="#fff" />
+        <circle cx="20.8" cy="31.8" r="1.7" fill="#fff" />
+        <circle cx="13.2" cy="31.8" r="1.7" fill="#fff" />
+        <circle cx="20.8" cy="24.2" r="1.7" fill="#fff" />
+        <rect x="17" y="10" width="22" height="22" rx="4.5" fill="currentColor" />
+        <circle cx="28" cy="21" r="2" fill="#fff" />
+        <circle cx="23.5" cy="15.8" r="1.7" fill="#fff" />
+        <circle cx="32.5" cy="15.8" r="1.7" fill="#fff" />
+        <circle cx="23.5" cy="26.2" r="1.7" fill="#fff" />
+        <circle cx="32.5" cy="26.2" r="1.7" fill="#fff" />
       </svg>
     );
   }
