@@ -36,6 +36,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'games',
+    name: 'Игры',
+    description: 'Steam wishlist — что есть и чего нет',
+    icon: 'games',
+    color: '#1b2838',
+    sortOrder: 40,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

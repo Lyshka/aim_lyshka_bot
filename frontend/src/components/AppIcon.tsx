@@ -93,6 +93,23 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
+  if (slug === 'games') {
+    return (
+      <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+        <path
+          d="M12 28a8 8 0 0 1 8-8h8a8 8 0 0 1 8 8v4a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8v-4Z"
+          fill="currentColor"
+        />
+        <path
+          d="M18 26v6M15 29h6M30 27h.01M33 30h.01"
+          stroke="#fff"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
       <rect x="10" y="10" width="28" height="28" rx="8" fill="currentColor" />
@@ -133,6 +150,13 @@ export function appAccent(slug: string, fallback: string) {
       from: '#60a5fa',
       to: '#1d4ed8',
       glow: 'rgba(37, 99, 235, 0.4)',
+    };
+  }
+  if (slug === 'games') {
+    return {
+      from: '#66c0f4',
+      to: '#1b2838',
+      glow: 'rgba(27, 40, 56, 0.45)',
     };
   }
   return {

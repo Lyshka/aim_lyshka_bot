@@ -166,6 +166,37 @@ export type HealthOverview = {
   };
 };
 
+export type SteamGame = {
+  id: string;
+  appId: string;
+  name: string;
+  imageUrl: string;
+  owned: boolean;
+  priority: number;
+  addedAt: string | null;
+  storeUrl: string;
+  updatedAt: string;
+};
+
+export type SteamProfile = {
+  steamId: string;
+  vanityUrl: string | null;
+  profileUrl: string;
+  lastSyncAt: string | null;
+};
+
+export type GamesOverview = {
+  steamConfigured: boolean;
+  profile: SteamProfile | null;
+  stats: {
+    total: number;
+    owned: number;
+    missing: number;
+  };
+  owned: SteamGame[];
+  missing: SteamGame[];
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -205,6 +236,21 @@ export const api = {
     }),
   healthOverview: (initData: string) =>
     request<HealthOverview>('/api/health/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  gamesOverview: (initData: string) =>
+    request<GamesOverview>('/api/games/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  gamesLink: (initData: string, steamInput: string) =>
+    request<GamesOverview>('/api/games/link', {
+      method: 'POST',
+      body: JSON.stringify({ initData, steamInput }),
+    }),
+  gamesSync: (initData: string) =>
+    request<GamesOverview>('/api/games/sync', {
       method: 'POST',
       body: JSON.stringify({ initData }),
     }),
