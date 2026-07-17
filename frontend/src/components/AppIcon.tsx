@@ -96,14 +96,22 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
   if (slug === 'games') {
     return (
       <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+        <rect x="6" y="6" width="36" height="36" rx="10" fill="currentColor" />
         <path
-          d="M12 28a8 8 0 0 1 8-8h8a8 8 0 0 1 8 8v4a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8v-4Z"
-          fill="currentColor"
+          d="M16.5 30.5c-2.2 0-4-1.8-4-4s1.8-4 4-4c.5 0 1 .1 1.4.3l3.2-4.6 4.2-1.2c.3-.9 1.1-1.5 2.1-1.5 1.2 0 2.2 1 2.2 2.2 0 1.2-1 2.2-2.2 2.2-.9 0-1.7-.6-2-1.4l-3.5 1-2.5 3.6c1 1 1.2 2.5.4 3.7-.5.8-1.4 1.3-2.3 1.3Z"
+          fill="#fff"
+        />
+        <circle cx="30.5" cy="27.5" r="1.6" fill="#66c0f4" />
+        <circle cx="34.2" cy="24.2" r="1.6" fill="#66c0f4" />
+        <path
+          d="M24 18.5c0-1.4 1.1-2.5 2.5-2.5S29 17.1 29 18.5 27.9 21 26.5 21 24 19.9 24 18.5Z"
+          fill="#fff"
+          opacity="0.9"
         />
         <path
-          d="M18 26v6M15 29h6M30 27h.01M33 30h.01"
-          stroke="#fff"
-          strokeWidth="2.4"
+          d="M15.2 27.8h2.6M16.5 26.5v2.6"
+          stroke="#1b2838"
+          strokeWidth="1.6"
           strokeLinecap="round"
         />
       </svg>

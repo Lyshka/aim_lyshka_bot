@@ -307,6 +307,47 @@ function StatCard({
   );
 }
 
+function SteamCover({ src }: { src?: string }) {
+  const [broken, setBroken] = useState(!src);
+
+  return (
+    <div
+      className="relative h-[52px] w-[116px] shrink-0 overflow-hidden rounded-[14px]"
+      style={{
+        background: 'linear-gradient(145deg, #1b2838 0%, #2a475e 55%, #171a21 100%)',
+      }}
+    >
+      {!broken && src ? (
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg viewBox="0 0 48 48" className="h-8 w-8" aria-hidden>
+            <circle cx="24" cy="24" r="18" fill="#171a21" />
+            <circle cx="24" cy="24" r="16" fill="#1b2838" stroke="#66c0f4" strokeWidth="1.5" />
+            <path
+              d="M18.2 29.8c-2.3 0-4.2-1.9-4.2-4.2 0-2.3 1.9-4.2 4.2-4.2.6 0 1.1.1 1.6.4l3.5-5 4.6-1.3c.4-1 1.3-1.7 2.4-1.7 1.4 0 2.5 1.1 2.5 2.5S30.7 18.8 29.3 18.8c-1 0-1.9-.6-2.3-1.5l-3.9 1.1-2.8 4c1.1 1.1 1.3 2.8.4 4.1-.6.9-1.5 1.4-2.5 1.4Z"
+              fill="#c7d5e0"
+            />
+            <circle cx="31.2" cy="27.2" r="1.5" fill="#66c0f4" />
+            <circle cx="34.4" cy="24.2" r="1.5" fill="#66c0f4" />
+            <path
+              d="M16.9 26.8h2.6M18.2 25.5v2.6"
+              stroke="#1b2838"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GameCard({
   game,
   variant,
@@ -324,20 +365,7 @@ function GameCard({
         background: 'color-mix(in srgb, white 75%, #1b2838)',
       }}
     >
-      {game.imageUrl ? (
-        <img
-          src={game.imageUrl}
-          alt=""
-          className="h-[52px] w-[116px] shrink-0 rounded-[14px] object-cover"
-        />
-      ) : (
-        <div
-          className="flex h-[52px] w-[116px] shrink-0 items-center justify-center rounded-[14px] text-xs"
-          style={{ background: 'var(--tg-secondary)' }}
-        >
-          Steam
-        </div>
-      )}
+      <SteamCover src={game.imageUrl || undefined} />
       <div className="min-w-0 py-1">
         <p className="line-clamp-2 text-sm font-semibold leading-snug">{game.name}</p>
         <p
