@@ -132,10 +132,23 @@ export type HealthDay = {
   steps: number | null;
   weightKg: number | null;
   bodyFatPercent: number | null;
+  leanBodyMassKg: number | null;
   muscleMassKg: number | null;
   waterPercent: number | null;
   boneMassKg: number | null;
   bmi: number | null;
+  heightCm: number | null;
+  distanceKm: number | null;
+  flightsClimbed: number | null;
+  restingEnergyKcal: number | null;
+  activeEnergyKcal: number | null;
+  walkingSpeedKmh: number | null;
+  walkingStepLengthCm: number | null;
+  walkingAsymmetryPercent: number | null;
+  doubleSupportPercent: number | null;
+  walkingSteadiness: string | null;
+  headphoneLevel: string | null;
+  sleepScore: number | null;
   source: string;
   updatedAt: string;
 };
@@ -182,7 +195,15 @@ export const api = {
     }),
   healthManual: (
     initData: string,
-    data: { day?: string; steps?: number; weightKg?: number; bodyFatPercent?: number },
+    data: {
+      day?: string;
+      steps?: number;
+      weightKg?: number;
+      bodyFatPercent?: number;
+      bmi?: number;
+      heightCm?: number;
+      leanBodyMassKg?: number;
+    },
   ) =>
     request<HealthDay>('/api/health/manual', {
       method: 'POST',

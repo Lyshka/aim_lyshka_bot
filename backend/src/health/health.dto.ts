@@ -45,10 +45,17 @@ export class HealthIngestDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(1)
+  @Min(0)
   @Max(80)
   @Type(() => Number)
   bodyFatPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(200)
+  @Type(() => Number)
+  leanBodyMassKg?: number;
 
   @IsOptional()
   @IsNumber()
@@ -79,6 +86,84 @@ export class HealthIngestDto {
   bmi?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(50)
+  @Max(250)
+  @Type(() => Number)
+  heightCm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  @Type(() => Number)
+  distanceKm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  @Type(() => Number)
+  flightsClimbed?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  @Type(() => Number)
+  restingEnergyKcal?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  @Type(() => Number)
+  activeEnergyKcal?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(30)
+  @Type(() => Number)
+  walkingSpeedKmh?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  @Type(() => Number)
+  walkingStepLengthCm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  walkingAsymmetryPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  doubleSupportPercent?: number;
+
+  @IsOptional()
+  @IsString()
+  walkingSteadiness?: string;
+
+  @IsOptional()
+  @IsString()
+  headphoneLevel?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  sleepScore?: number;
+
+  @IsOptional()
   @IsString()
   source?: string;
 }
@@ -104,8 +189,29 @@ export class HealthManualDto extends HealthInitDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(1)
+  @Min(0)
   @Max(80)
   @Type(() => Number)
   bodyFatPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(10)
+  @Max(80)
+  @Type(() => Number)
+  bmi?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(50)
+  @Max(250)
+  @Type(() => Number)
+  heightCm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(200)
+  @Type(() => Number)
+  leanBodyMassKg?: number;
 }

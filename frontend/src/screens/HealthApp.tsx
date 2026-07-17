@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type HealthOverview } from '../api/client';
+import { api, type HealthDay, type HealthOverview } from '../api/client';
 import { useTelegram } from '../telegram/TelegramProvider';
 
 type HealthAppProps = {
@@ -12,6 +12,16 @@ function formatDay(day: string) {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
+  });
+}
+
+function fmt(value: number | null | undefined, digits = 2) {
+  if (value == null) {
+    return null;
+  }
+  return value.toLocaleString('ru-RU', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
 }
 
@@ -28,7 +38,9 @@ export function HealthApp({ onBack }: HealthAppProps) {
     const next = await api.healthOverview(initData);
     setData(next);
     setSteps(next.today?.steps != null ? String(next.today.steps) : '');
-    setWeight(next.today?.weightKg != null ? String(next.today.weightKg) : '');
+    setWeight(
+      next.today?.weightKg != null ? next.today.weightKg.toFixed(2) : '',
+    );
   }
 
   useEffect(() => {
@@ -42,7 +54,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
         setData(next);
         setSteps(next.today?.steps != null ? String(next.today.steps) : '');
         setWeight(
-          next.today?.weightKg != null ? String(next.today.weightKg) : '',
+          next.today?.weightKg != null ? next.today.weightKg.toFixed(2) : '',
         );
       })
       .catch((err: Error) => {
@@ -61,7 +73,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
     try {
       await api.healthManual(initData, {
         steps: steps.trim() ? Number(steps) : undefined,
-        weightKg: weight.trim() ? Number(weight) : undefined,
+        weightKg: weight.trim() ? Number(weight.replace(',', '.')) : undefined,
       });
       await load();
       setStatus('Сохранено');
@@ -96,6 +108,10 @@ export function HealthApp({ onBack }: HealthAppProps) {
     );
   }
 
+  const today = data.today;
+  const weightValue =
+    today?.weightKg != null ? today.weightKg : data.stats.lastWeightKg;
+
   return (
     <div className="health-app relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden px-4 pt-5 pb-10">
       <div className="health-glow" aria-hidden />
@@ -119,7 +135,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
             Здоровье
           </h1>
           <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Шаги и вес
+            Все метрики из Health
           </p>
         </div>
       </div>
@@ -136,7 +152,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
             Шаги сегодня
           </p>
           <p className="font-display mt-3 text-3xl font-semibold">
-            {data.today?.steps?.toLocaleString('ru-RU') ?? '—'}
+            {today?.steps?.toLocaleString('ru-RU') ?? '—'}
           </p>
         </div>
         <div
@@ -153,25 +169,65 @@ export function HealthApp({ onBack }: HealthAppProps) {
             Вес
           </p>
           <p className="font-display mt-3 text-3xl font-semibold">
-            {data.today?.weightKg != null
-              ? `${data.today.weightKg.toFixed(1)}`
-              : data.stats.lastWeightKg != null
-                ? `${data.stats.lastWeightKg.toFixed(1)}`
-                : '—'}
+            {weightValue != null ? fmt(weightValue, 2) : '—'}
             <span className="ml-1 text-base font-medium opacity-60">кг</span>
           </p>
         </div>
       </div>
 
-      {(data.today?.bodyFatPercent != null ||
-        data.today?.muscleMassKg != null ||
-        data.today?.waterPercent != null) && (
-        <div className="relative z-10 mt-3 grid grid-cols-3 gap-2">
-          <Metric label="Жир %" value={data.today.bodyFatPercent} />
-          <Metric label="Мышцы" value={data.today.muscleMassKg} suffix="кг" />
-          <Metric label="Вода %" value={data.today.waterPercent} />
-        </div>
-      )}
+      <div className="relative z-10 mt-3 grid grid-cols-2 gap-2">
+        <Metric label="Жир %" value={fmt(today?.bodyFatPercent, 1)} />
+        <Metric label="ИМТ" value={fmt(today?.bmi, 1)} />
+        <Metric label="Рост" value={fmt(today?.heightCm, 0)} suffix="см" />
+        <Metric
+          label="Безжир. масса"
+          value={fmt(today?.leanBodyMassKg, 2)}
+          suffix="кг"
+        />
+        <Metric label="Дистанция" value={fmt(today?.distanceKm, 2)} suffix="км" />
+        <Metric
+          label="Пролёты"
+          value={
+            today?.flightsClimbed != null
+              ? String(Math.round(today.flightsClimbed))
+              : null
+          }
+        />
+        <Metric
+          label="Энергия покоя"
+          value={fmt(today?.restingEnergyKcal, 0)}
+          suffix="ккал"
+        />
+        <Metric
+          label="Активность"
+          value={fmt(today?.activeEnergyKcal, 2)}
+          suffix="ккал"
+        />
+        <Metric
+          label="Скорость ходьбы"
+          value={fmt(today?.walkingSpeedKmh, 1)}
+          suffix="км/ч"
+        />
+        <Metric
+          label="Длина шага"
+          value={fmt(today?.walkingStepLengthCm, 0)}
+          suffix="см"
+        />
+        <Metric
+          label="Асимметрия"
+          value={fmt(today?.walkingAsymmetryPercent, 2)}
+          suffix="%"
+        />
+        <Metric
+          label="Двойная опора"
+          value={fmt(today?.doubleSupportPercent, 0)}
+          suffix="%"
+        />
+        <Metric label="Устойчивость" value={today?.walkingSteadiness} />
+        <Metric label="Наушники" value={today?.headphoneLevel} />
+        <Metric label="Сон" value={fmt(today?.sleepScore, 0)} />
+        <Metric label="Вода %" value={fmt(today?.waterPercent, 1)} />
+      </div>
 
       <section
         className="relative z-10 mt-5 space-y-3 rounded-[28px] px-4 py-4"
@@ -197,6 +253,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               inputMode="decimal"
+              placeholder="102.95"
               className="mt-1 w-full rounded-xl border-0 px-3 py-2 outline-none"
               style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
             />
@@ -227,18 +284,10 @@ export function HealthApp({ onBack }: HealthAppProps) {
       >
         <p className="font-semibold text-[var(--tg-text)]">Автосинхронизация</p>
         <p className="mt-2">
-          Из Telegram нельзя напрямую читать Apple Health и ОКОК. Рабочая схема:
-          ОКОК → Apple Health → Shortcuts / Health Auto Export → наш webhook.
+          POST http://IP:8080/api/health/ingest
+          {data.ingestConfigured ? ' · токен задан' : ' · токен не задан'}
         </p>
-        <p className="mt-2">
-          Токен: <span className="font-medium text-[var(--tg-text)]">HEALTH_INGEST_TOKEN</span>
-          {data.ingestConfigured ? ' · задан' : ' · не задан в .env'}
-        </p>
-        <p className="mt-2 break-all">
-          POST /api/health/ingest
-          <br />
-          userId: {user?.id}
-        </p>
+        <p className="mt-2 break-all">userId: {user?.id}</p>
       </section>
 
       {data.history.length > 0 ? (
@@ -246,31 +295,53 @@ export function HealthApp({ onBack }: HealthAppProps) {
           <h2 className="font-display mb-3 text-lg font-semibold">История</h2>
           <div className="space-y-2">
             {data.history.map((row) => (
-              <article
-                key={row.id}
-                className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-                style={{
-                  background: 'color-mix(in srgb, white 70%, #dbeafe)',
-                }}
-              >
-                <div>
-                  <p className="text-sm font-semibold">{formatDay(row.day)}</p>
-                  <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-                    {row.source}
-                  </p>
-                </div>
-                <div className="text-right text-sm">
-                  <p>{row.steps != null ? `${row.steps.toLocaleString('ru-RU')} шагов` : '—'}</p>
-                  <p style={{ color: 'var(--tg-hint)' }}>
-                    {row.weightKg != null ? `${row.weightKg.toFixed(1)} кг` : '—'}
-                  </p>
-                </div>
-              </article>
+              <HistoryRow key={row.id} row={row} />
             ))}
           </div>
         </section>
       ) : null}
     </div>
+  );
+}
+
+function HistoryRow({ row }: { row: HealthDay }) {
+  return (
+    <article
+      className="rounded-2xl px-4 py-3"
+      style={{
+        background: 'color-mix(in srgb, white 70%, #dbeafe)',
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{formatDay(row.day)}</p>
+          <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+            {row.source}
+          </p>
+        </div>
+        <div className="text-right text-sm">
+          <p>
+            {row.steps != null ? `${row.steps.toLocaleString('ru-RU')} шагов` : '—'}
+          </p>
+          <p style={{ color: 'var(--tg-hint)' }}>
+            {row.weightKg != null ? `${fmt(row.weightKg, 2)} кг` : '—'}
+          </p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--tg-hint)' }}>
+        {[
+          row.bodyFatPercent != null ? `жир ${fmt(row.bodyFatPercent, 1)}%` : null,
+          row.bmi != null ? `ИМТ ${fmt(row.bmi, 1)}` : null,
+          row.leanBodyMassKg != null
+            ? `безжир. ${fmt(row.leanBodyMassKg, 2)} кг`
+            : null,
+          row.heightCm != null ? `рост ${fmt(row.heightCm, 0)} см` : null,
+          row.distanceKm != null ? `${fmt(row.distanceKm, 2)} км` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || 'нет доп. метрик'}
+      </p>
+    </article>
   );
 }
 
@@ -280,7 +351,7 @@ function Metric({
   suffix,
 }: {
   label: string;
-  value: number | null | undefined;
+  value: string | null | undefined;
   suffix?: string;
 }) {
   return (
@@ -288,7 +359,10 @@ function Metric({
       className="rounded-2xl px-3 py-3 text-center"
       style={{ background: 'color-mix(in srgb, white 70%, #dbeafe)' }}
     >
-      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--tg-hint)' }}>
+      <p
+        className="text-[10px] uppercase tracking-wide"
+        style={{ color: 'var(--tg-hint)' }}
+      >
         {label}
       </p>
       <p className="mt-1 text-sm font-semibold">

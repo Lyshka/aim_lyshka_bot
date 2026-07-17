@@ -30,6 +30,9 @@ export class HealthController {
       steps: dto.steps,
       weightKg: dto.weightKg,
       bodyFatPercent: dto.bodyFatPercent,
+      bmi: dto.bmi,
+      heightCm: dto.heightCm,
+      leanBodyMassKg: dto.leanBodyMassKg,
       source: 'manual',
     });
   }
@@ -42,10 +45,23 @@ export class HealthController {
       steps: dto.steps,
       weightKg: dto.weightKg,
       bodyFatPercent: dto.bodyFatPercent,
+      leanBodyMassKg: dto.leanBodyMassKg,
       muscleMassKg: dto.muscleMassKg,
       waterPercent: dto.waterPercent,
       boneMassKg: dto.boneMassKg,
       bmi: dto.bmi,
+      heightCm: dto.heightCm,
+      distanceKm: dto.distanceKm,
+      flightsClimbed: dto.flightsClimbed,
+      restingEnergyKcal: dto.restingEnergyKcal,
+      activeEnergyKcal: dto.activeEnergyKcal,
+      walkingSpeedKmh: dto.walkingSpeedKmh,
+      walkingStepLengthCm: dto.walkingStepLengthCm,
+      walkingAsymmetryPercent: dto.walkingAsymmetryPercent,
+      doubleSupportPercent: dto.doubleSupportPercent,
+      walkingSteadiness: dto.walkingSteadiness,
+      headphoneLevel: dto.headphoneLevel,
+      sleepScore: dto.sleepScore,
       source: dto.source?.trim() || 'apple_health',
     });
   }

@@ -117,20 +117,33 @@ model CatPost {
 }
 
 model HealthDay {
-  id              String   @id @default(cuid())
-  userId          BigInt
-  day             String
-  steps           Int?
-  weightKg        Float?
-  bodyFatPercent  Float?
-  muscleMassKg    Float?
-  waterPercent    Float?
-  boneMassKg      Float?
-  bmi             Float?
-  source          String   @default("manual")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String   @id @default(cuid())
+  userId                   BigInt
+  day                      String
+  steps                    Int?
+  weightKg                 Float?
+  bodyFatPercent           Float?
+  leanBodyMassKg           Float?
+  muscleMassKg             Float?
+  waterPercent             Float?
+  boneMassKg               Float?
+  bmi                      Float?
+  heightCm                 Float?
+  distanceKm               Float?
+  flightsClimbed           Float?
+  restingEnergyKcal        Float?
+  activeEnergyKcal         Float?
+  walkingSpeedKmh          Float?
+  walkingStepLengthCm      Float?
+  walkingAsymmetryPercent  Float?
+  doubleSupportPercent     Float?
+  walkingSteadiness        String?
+  headphoneLevel           String?
+  sleepScore               Float?
+  source                   String   @default("manual")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])
   @@index([userId, day])

@@ -7,16 +7,92 @@ import { ConfigService } from '@nestjs/config';
 import { formatYmd } from '../common/calendar';
 import { PrismaService } from '../prisma/prisma.service';
 
+type HealthPatch = {
+  day?: string;
+  steps?: number;
+  weightKg?: number;
+  bodyFatPercent?: number;
+  leanBodyMassKg?: number;
+  muscleMassKg?: number;
+  waterPercent?: number;
+  boneMassKg?: number;
+  bmi?: number;
+  heightCm?: number;
+  distanceKm?: number;
+  flightsClimbed?: number;
+  restingEnergyKcal?: number;
+  activeEnergyKcal?: number;
+  walkingSpeedKmh?: number;
+  walkingStepLengthCm?: number;
+  walkingAsymmetryPercent?: number;
+  doubleSupportPercent?: number;
+  walkingSteadiness?: string;
+  headphoneLevel?: string;
+  sleepScore?: number;
+  source?: string;
+};
+
+function round2(value: number | null | undefined): number | null {
+  if (value == null || Number.isNaN(value)) {
+    return null;
+  }
+  return Math.round(value * 100) / 100;
+}
+
+function pickNumber(
+  incoming: number | undefined,
+  existing: number | null | undefined,
+): number | null {
+  if (incoming !== undefined) {
+    return round2(incoming);
+  }
+  return existing ?? null;
+}
+
+function pickInt(
+  incoming: number | undefined,
+  existing: number | null | undefined,
+): number | null {
+  if (incoming !== undefined) {
+    return Math.round(incoming);
+  }
+  return existing ?? null;
+}
+
+function pickText(
+  incoming: string | undefined,
+  existing: string | null | undefined,
+): string | null {
+  if (incoming !== undefined) {
+    const value = incoming.trim();
+    return value || null;
+  }
+  return existing ?? null;
+}
+
 function serializeDay(row: {
   id: string;
   day: string;
   steps: number | null;
   weightKg: number | null;
   bodyFatPercent: number | null;
+  leanBodyMassKg: number | null;
   muscleMassKg: number | null;
   waterPercent: number | null;
   boneMassKg: number | null;
   bmi: number | null;
+  heightCm: number | null;
+  distanceKm: number | null;
+  flightsClimbed: number | null;
+  restingEnergyKcal: number | null;
+  activeEnergyKcal: number | null;
+  walkingSpeedKmh: number | null;
+  walkingStepLengthCm: number | null;
+  walkingAsymmetryPercent: number | null;
+  doubleSupportPercent: number | null;
+  walkingSteadiness: string | null;
+  headphoneLevel: string | null;
+  sleepScore: number | null;
   source: string;
   updatedAt: Date;
 }) {
@@ -24,12 +100,25 @@ function serializeDay(row: {
     id: row.id,
     day: row.day,
     steps: row.steps,
-    weightKg: row.weightKg,
-    bodyFatPercent: row.bodyFatPercent,
-    muscleMassKg: row.muscleMassKg,
-    waterPercent: row.waterPercent,
-    boneMassKg: row.boneMassKg,
-    bmi: row.bmi,
+    weightKg: round2(row.weightKg),
+    bodyFatPercent: round2(row.bodyFatPercent),
+    leanBodyMassKg: round2(row.leanBodyMassKg ?? row.muscleMassKg),
+    muscleMassKg: round2(row.muscleMassKg),
+    waterPercent: round2(row.waterPercent),
+    boneMassKg: round2(row.boneMassKg),
+    bmi: round2(row.bmi),
+    heightCm: round2(row.heightCm),
+    distanceKm: round2(row.distanceKm),
+    flightsClimbed: round2(row.flightsClimbed),
+    restingEnergyKcal: round2(row.restingEnergyKcal),
+    activeEnergyKcal: round2(row.activeEnergyKcal),
+    walkingSpeedKmh: round2(row.walkingSpeedKmh),
+    walkingStepLengthCm: round2(row.walkingStepLengthCm),
+    walkingAsymmetryPercent: round2(row.walkingAsymmetryPercent),
+    doubleSupportPercent: round2(row.doubleSupportPercent),
+    walkingSteadiness: row.walkingSteadiness,
+    headphoneLevel: row.headphoneLevel,
+    sleepScore: round2(row.sleepScore),
     source: row.source,
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -72,26 +161,13 @@ export class HealthService {
       ingestConfigured: Boolean(this.ingestToken()),
       stats: {
         daysTracked: rows.length,
-        lastWeightKg: withWeight[0]?.weightKg ?? null,
+        lastWeightKg: round2(withWeight[0]?.weightKg ?? null),
         lastSteps: withSteps[0]?.steps ?? null,
       },
     };
   }
 
-  async upsertDay(
-    userId: number,
-    data: {
-      day?: string;
-      steps?: number;
-      weightKg?: number;
-      bodyFatPercent?: number;
-      muscleMassKg?: number;
-      waterPercent?: number;
-      boneMassKg?: number;
-      bmi?: number;
-      source?: string;
-    },
-  ) {
+  async upsertDay(userId: number, data: HealthPatch) {
     const day = data.day?.trim() || formatYmd(new Date(), 'Europe/Moscow');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
       throw new ForbiddenException('Некорректная дата');
@@ -122,14 +198,55 @@ export class HealthService {
       },
     });
 
+    const lean =
+      data.leanBodyMassKg !== undefined
+        ? data.leanBodyMassKg
+        : data.muscleMassKg !== undefined && data.leanBodyMassKg === undefined
+          ? data.muscleMassKg
+          : undefined;
+
     const payload = {
-      steps: data.steps ?? existing?.steps ?? null,
-      weightKg: data.weightKg ?? existing?.weightKg ?? null,
-      bodyFatPercent: data.bodyFatPercent ?? existing?.bodyFatPercent ?? null,
-      muscleMassKg: data.muscleMassKg ?? existing?.muscleMassKg ?? null,
-      waterPercent: data.waterPercent ?? existing?.waterPercent ?? null,
-      boneMassKg: data.boneMassKg ?? existing?.boneMassKg ?? null,
-      bmi: data.bmi ?? existing?.bmi ?? null,
+      steps: pickInt(data.steps, existing?.steps),
+      weightKg: pickNumber(data.weightKg, existing?.weightKg),
+      bodyFatPercent: pickNumber(data.bodyFatPercent, existing?.bodyFatPercent),
+      leanBodyMassKg: pickNumber(lean, existing?.leanBodyMassKg),
+      muscleMassKg: pickNumber(data.muscleMassKg, existing?.muscleMassKg),
+      waterPercent: pickNumber(data.waterPercent, existing?.waterPercent),
+      boneMassKg: pickNumber(data.boneMassKg, existing?.boneMassKg),
+      bmi: pickNumber(data.bmi, existing?.bmi),
+      heightCm: pickNumber(data.heightCm, existing?.heightCm),
+      distanceKm: pickNumber(data.distanceKm, existing?.distanceKm),
+      flightsClimbed: pickNumber(data.flightsClimbed, existing?.flightsClimbed),
+      restingEnergyKcal: pickNumber(
+        data.restingEnergyKcal,
+        existing?.restingEnergyKcal,
+      ),
+      activeEnergyKcal: pickNumber(
+        data.activeEnergyKcal,
+        existing?.activeEnergyKcal,
+      ),
+      walkingSpeedKmh: pickNumber(
+        data.walkingSpeedKmh,
+        existing?.walkingSpeedKmh,
+      ),
+      walkingStepLengthCm: pickNumber(
+        data.walkingStepLengthCm,
+        existing?.walkingStepLengthCm,
+      ),
+      walkingAsymmetryPercent: pickNumber(
+        data.walkingAsymmetryPercent,
+        existing?.walkingAsymmetryPercent,
+      ),
+      doubleSupportPercent: pickNumber(
+        data.doubleSupportPercent,
+        existing?.doubleSupportPercent,
+      ),
+      walkingSteadiness: pickText(
+        data.walkingSteadiness,
+        existing?.walkingSteadiness,
+      ),
+      headphoneLevel: pickText(data.headphoneLevel, existing?.headphoneLevel),
+      sleepScore: pickNumber(data.sleepScore, existing?.sleepScore),
       source: data.source ?? existing?.source ?? 'manual',
     };
 
