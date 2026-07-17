@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Medication, type Overview } from '../api/client';
+import { api, type Medication } from '../api/client';
 import { useTelegram } from '../telegram/TelegramProvider';
 
 const emptyForm = {
@@ -13,7 +13,6 @@ const emptyForm = {
 export function SettingsScreen() {
   const { initData, haptic } = useTelegram();
   const [meds, setMeds] = useState<Medication[]>([]);
-  const [settings, setSettings] = useState<Overview['settings']>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -29,7 +28,6 @@ export function SettingsScreen() {
           return;
         }
         setMeds(data.medications);
-        setSettings(data.settings);
       })
       .catch((err: Error) => setStatus(err.message));
     return () => {
@@ -57,7 +55,7 @@ export function SettingsScreen() {
     setCreating(true);
     setForm({
       ...emptyForm,
-      intervalDays: String(settings?.defaultInterval ?? 1),
+      intervalDays: '1',
     });
     setStatus(null);
   }

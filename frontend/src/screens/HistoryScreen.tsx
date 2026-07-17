@@ -207,11 +207,11 @@ export function HistoryScreen() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <ActionButton disabled={busy} onClick={() => void load()}>
+        <div className="grid grid-cols-2 gap-2">
+          <ActionButton disabled={busy} onClick={() => void load()} fullWidth>
             Применить
           </ActionButton>
-          <ActionButton disabled={busy} onClick={resetFilter} secondary>
+          <ActionButton disabled={busy} onClick={resetFilter} secondary fullWidth>
             Сбросить
           </ActionButton>
         </div>
@@ -384,19 +384,21 @@ function ActionButton({
   disabled,
   secondary,
   danger,
+  fullWidth,
 }: {
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   secondary?: boolean;
   danger?: boolean;
+  fullWidth?: boolean;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
+      className={`rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50 ${fullWidth ? 'w-full' : ''}`}
       style={{
         background: danger
           ? 'color-mix(in srgb, #b42318 16%, transparent)'

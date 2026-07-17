@@ -28,8 +28,13 @@ export function Shell<T extends string>({
   const { haptic } = useTelegram();
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col">
-      <main className="flex-1 px-4 pt-5 pb-28">{children}</main>
+    <div className="mx-auto flex w-full max-w-md flex-col">
+      <main
+        className="px-4 pt-5"
+        style={{ paddingBottom: 'calc(5.5rem + var(--safe-bottom))' }}
+      >
+        {children}
+      </main>
       <nav
         className="fixed inset-x-0 bottom-0 border-t px-3 pt-2"
         style={{

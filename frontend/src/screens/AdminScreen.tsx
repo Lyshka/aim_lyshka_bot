@@ -21,14 +21,31 @@ type PendingGrantAction = {
 };
 
 const adminTabs: { id: AdminTab; label: string }[] = [
-  { id: 'search', label: 'Поиск' },
   { id: 'access', label: 'С доступом' },
+  { id: 'search', label: 'Поиск' },
 ];
+
+const grantPalette = {
+  yes: {
+    card: 'color-mix(in srgb, #16a34a 10%, white)',
+    badgeBg: '#dcfce7',
+    badgeText: '#15803d',
+    button: 'linear-gradient(145deg, #22c55e, #16a34a)',
+    buttonText: '#fff',
+  },
+  no: {
+    card: 'var(--tg-bg)',
+    badgeBg: '#fee2e2',
+    badgeText: '#b42318',
+    button: 'color-mix(in srgb, #b42318 14%, transparent)',
+    buttonText: '#b42318',
+  },
+};
 
 export function AdminScreen({ onBack }: AdminScreenProps) {
   const { initData, haptic, refreshSession } = useTelegram();
   const [data, setData] = useState<AdminOverview | null>(null);
-  const [tab, setTab] = useState<AdminTab>('search');
+  const [tab, setTab] = useState<AdminTab>('access');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<AdminUser[]>([]);
   const [searched, setSearched] = useState(false);
@@ -342,6 +359,7 @@ function UserGrantsCard({
         {grantableApps.map((app) => {
           const on = grantSlugs.has(app.slug);
           const accent = appAccent(app.slug, app.color);
+          const palette = on ? grantPalette.yes : grantPalette.no;
           const pending = pendingAction;
           const isPending =
             pending?.userId === user.id && pending.app.slug === app.slug;
@@ -351,9 +369,7 @@ function UserGrantsCard({
               key={app.id}
               className="rounded-2xl px-3 py-3"
               style={{
-                background: on
-                  ? `color-mix(in srgb, ${accent.from} 12%, white)`
-                  : 'var(--tg-bg)',
+                background: palette.card,
               }}
             >
               <div className="flex items-center gap-3">
@@ -374,10 +390,8 @@ function UserGrantsCard({
                 <span
                   className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
                   style={{
-                    background: on
-                      ? `color-mix(in srgb, ${accent.to} 18%, white)`
-                      : 'color-mix(in srgb, var(--tg-hint) 12%, transparent)',
-                    color: on ? accent.to : 'var(--tg-hint)',
+                    background: palette.badgeBg,
+                    color: palette.badgeText,
                   }}
                 >
                   {on ? 'Есть' : 'Нет'}
@@ -409,9 +423,11 @@ function UserGrantsCard({
                       className="flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold disabled:opacity-50"
                       style={{
                         background: pending.enabled
-                          ? `linear-gradient(145deg, ${accent.from}, ${accent.to})`
-                          : 'color-mix(in srgb, #b42318 16%, transparent)',
-                        color: pending.enabled ? '#fff' : '#b42318',
+                          ? grantPalette.yes.button
+                          : grantPalette.no.button,
+                        color: pending.enabled
+                          ? grantPalette.yes.buttonText
+                          : grantPalette.no.buttonText,
                       }}
                     >
                       {pending.enabled ? 'Выдать' : 'Снять'}
@@ -440,9 +456,8 @@ function UserGrantsCard({
                       onClick={() => onRequest(user.id, app, false)}
                       className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold disabled:opacity-50"
                       style={{
-                        background:
-                          'color-mix(in srgb, #b42318 14%, transparent)',
-                        color: '#b42318',
+                        background: grantPalette.no.button,
+                        color: grantPalette.no.buttonText,
                       }}
                     >
                       Снять доступ
@@ -454,8 +469,8 @@ function UserGrantsCard({
                       onClick={() => onRequest(user.id, app, true)}
                       className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold disabled:opacity-50"
                       style={{
-                        background: `linear-gradient(145deg, ${accent.from}, ${accent.to})`,
-                        color: '#fff',
+                        background: grantPalette.yes.button,
+                        color: grantPalette.yes.buttonText,
                       }}
                     >
                       Выдать доступ

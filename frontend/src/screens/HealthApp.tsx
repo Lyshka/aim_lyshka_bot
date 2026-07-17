@@ -120,10 +120,12 @@ export function HealthApp({ onBack }: HealthAppProps) {
       : data.history;
 
   return (
-    <div className="health-app relative mx-auto min-h-[100dvh] w-full max-w-md">
+    <>
+      <div className="health-app" aria-hidden />
       <div className="health-glow" aria-hidden />
 
-      <div className="relative z-10 px-4 pt-4">
+      <div className="relative z-10 mx-auto w-full max-w-md">
+        <div className="px-4 pt-4">
         <button
           type="button"
           onClick={() => {
@@ -220,8 +222,9 @@ export function HealthApp({ onBack }: HealthAppProps) {
                 <CustomDateField label="От" value={from} onChange={setFrom} />
                 <CustomDateField label="До" value={to} onChange={setTo} />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <ActionButton
+                  fullWidth
                   onClick={() => {
                     setAppliedFrom(from);
                     setAppliedTo(to);
@@ -230,6 +233,7 @@ export function HealthApp({ onBack }: HealthAppProps) {
                   Применить
                 </ActionButton>
                 <ActionButton
+                  fullWidth
                   secondary
                   onClick={() => {
                     setFrom('');
@@ -257,7 +261,8 @@ export function HealthApp({ onBack }: HealthAppProps) {
           </div>
         ) : null}
       </Shell>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -343,16 +348,18 @@ function ActionButton({
   children,
   onClick,
   secondary,
+  fullWidth,
 }: {
   children: ReactNode;
   onClick: () => void;
   secondary?: boolean;
+  fullWidth?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-xl px-3 py-2 text-sm font-medium"
+      className={`rounded-xl px-3 py-2.5 text-sm font-medium ${fullWidth ? 'w-full' : ''}`}
       style={{
         background: secondary
           ? 'color-mix(in srgb, var(--tg-hint) 14%, transparent)'
