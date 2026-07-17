@@ -204,7 +204,7 @@ export class AppsService implements OnModuleInit {
     return apps.map(serializeApp);
   }
 
-  async listUsersWithGrants() {
+  async listUsersWithGrants(onlyWithAccess = false) {
     const users = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -214,7 +214,56 @@ export class AppsService implements OnModuleInit {
       },
     });
 
-    return users.map((user) => ({
+    const mapped = users.map((user) => this.serializeAdminUser(user));
+    if (!onlyWithAccess) {
+      return mapped;
+    }
+    return mapped.filter((user) => user.grants.length > 0);
+  }
+
+  async searchUsers(query: string) {
+    const normalized = query.trim().replace(/^@+/, '');
+    if (!normalized) {
+      return [];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: /^\d+$/.test(normalized)
+        ? { id: BigInt(normalized) }
+        : {
+            username: {
+              contains: normalized,
+              mode: 'insensitive',
+            },
+          },
+      include: {
+        appGrants: {
+          include: { app: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    return users.map((user) => this.serializeAdminUser(user));
+  }
+
+  private serializeAdminUser(user: {
+    id: bigint;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    createdAt: Date;
+    appGrants: {
+      app: {
+        id: string;
+        slug: string;
+        name: string;
+        isSystem: boolean;
+      };
+    }[];
+  }) {
+    return {
       id: Number(user.id),
       username: user.username,
       firstName: user.firstName,
@@ -228,7 +277,7 @@ export class AppsService implements OnModuleInit {
           slug: g.app.slug,
           name: g.app.name,
         })),
-    }));
+    };
   }
 
   async setGrant(userId: number, appSlug: string, enabled: boolean) {
@@ -245,19 +294,9 @@ export class AppsService implements OnModuleInit {
     const uid = BigInt(userId);
     const existingUser = await this.prisma.user.findUnique({ where: { id: uid } });
     if (!existingUser) {
-      await this.prisma.user.create({
-        data: {
-          id: uid,
-          settings: {
-            create: {
-              defaultInterval: 2,
-              reminderHour: 12,
-              reminderMinute: 0,
-              timezone: 'Europe/Moscow',
-            },
-          },
-        },
-      });
+      throw new NotFoundException(
+        'Пользователь не найден. Сначала он должен написать боту /start',
+      );
     }
 
     if (enabled) {

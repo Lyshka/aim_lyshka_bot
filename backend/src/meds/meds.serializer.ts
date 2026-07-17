@@ -19,7 +19,6 @@ function serializeMedication(
   timeZone = 'Europe/Moscow',
 ) {
   const now = new Date();
-  const dueAt = med.nextDueAt.getTime();
   const daysUntilDue = calendarDaysUntil(now, med.nextDueAt, timeZone);
   return {
     id: med.id,
@@ -33,7 +32,7 @@ function serializeMedication(
     nextDueAt: med.nextDueAt.toISOString(),
     lastTakenAt: med.lastTakenAt?.toISOString() ?? null,
     sortOrder: med.sortOrder,
-    isDue: med.active && dueAt <= now.getTime(),
+    isDue: med.active && daysUntilDue <= 0,
     daysUntilDue,
   };
 }

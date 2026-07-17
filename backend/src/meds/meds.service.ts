@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import {
+  formatYmd,
   nextDueFromTake,
   startOfNextLocalDay,
 } from '../common/calendar';
@@ -32,7 +33,10 @@ export class MedsService {
       where: { userId: BigInt(userId) },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
-    return meds.map((med) => serializeMedication(med, timeZone));
+    const normalized = await Promise.all(
+      meds.map((med) => this.normalizeMedicationSchedule(med, timeZone)),
+    );
+    return normalized.map((med) => serializeMedication(med, timeZone));
   }
 
   async overview(userId: number) {
@@ -399,16 +403,57 @@ export class MedsService {
   }
 
   async findDueMedications() {
-    return this.prisma.medication.findMany({
-      where: {
-        active: true,
-        nextDueAt: { lte: new Date() },
-      },
+    const meds = await this.prisma.medication.findMany({
+      where: { active: true },
       include: {
         user: { include: { settings: true } },
       },
       orderBy: { nextDueAt: 'asc' },
     });
+
+    const due: typeof meds = [];
+
+    for (const med of meds) {
+      const timeZone = med.user.settings?.timezone || 'Europe/Moscow';
+      const normalized = await this.normalizeMedicationSchedule(med, timeZone);
+      const serialized = serializeMedication(normalized, timeZone);
+      if (serialized.isDue) {
+        due.push(normalized);
+      }
+    }
+
+    return due;
+  }
+
+  private async normalizeMedicationSchedule<
+    T extends {
+      id: string;
+      lastTakenAt: Date | null;
+      intervalDays: number;
+      nextDueAt: Date;
+    },
+  >(med: T, timeZone: string): Promise<T> {
+    if (!med.lastTakenAt) {
+      return med;
+    }
+
+    const expected = nextDueFromTake(
+      med.lastTakenAt,
+      med.intervalDays,
+      timeZone,
+    );
+    const expectedYmd = formatYmd(expected, timeZone);
+    const actualYmd = formatYmd(med.nextDueAt, timeZone);
+
+    if (expectedYmd !== actualYmd || med.nextDueAt.getTime() !== expected.getTime()) {
+      const updated = await this.prisma.medication.update({
+        where: { id: med.id },
+        data: { nextDueAt: expected },
+      });
+      return { ...med, nextDueAt: updated.nextDueAt };
+    }
+
+    return med;
   }
 
   private async getOwned(userId: number, medicationId: string) {

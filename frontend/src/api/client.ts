@@ -88,6 +88,10 @@ export type AdminUser = {
   grants: { appId: string; slug: string; name: string }[];
 };
 
+export type AdminSearch = {
+  users: AdminUser[];
+};
+
 export type AdminOverview = {
   apps: PlatformApp[];
   users: AdminUser[];
@@ -165,6 +169,11 @@ export const api = {
     request<AdminOverview>('/api/admin/overview', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  adminSearch: (initData: string, query: string) =>
+    request<AdminSearch>('/api/admin/search', {
+      method: 'POST',
+      body: JSON.stringify({ initData, query }),
     }),
   setGrant: (
     initData: string,

@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
 import { AppsService } from '../apps/apps.service';
-import { AdminInitDto, SetGrantDto } from './admin.dto';
+import { AdminInitDto, AdminSearchDto, SetGrantDto } from './admin.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -21,9 +21,16 @@ export class AdminController {
     await this.adminId(dto.initData);
     const [apps, users] = await Promise.all([
       this.appsService.listAllApps(),
-      this.appsService.listUsersWithGrants(),
+      this.appsService.listUsersWithGrants(true),
     ]);
     return { apps, users };
+  }
+
+  @Post('search')
+  async search(@Body() dto: AdminSearchDto) {
+    await this.adminId(dto.initData);
+    const users = await this.appsService.searchUsers(dto.query);
+    return { users };
   }
 
   @Post('grants')
@@ -32,7 +39,7 @@ export class AdminController {
     await this.appsService.setGrant(dto.userId, dto.appSlug, dto.enabled);
     const [apps, users] = await Promise.all([
       this.appsService.listAllApps(),
-      this.appsService.listUsersWithGrants(),
+      this.appsService.listUsersWithGrants(true),
     ]);
     return { apps, users };
   }
