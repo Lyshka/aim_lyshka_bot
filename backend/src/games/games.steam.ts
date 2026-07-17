@@ -332,6 +332,9 @@ type InventoryItemRaw = {
   iconUrl: string;
   amount: number;
   marketable: boolean;
+  typeLabel: string;
+  rarity: string;
+  exterior: string;
 };
 
 type InventoryPage = {
@@ -349,6 +352,11 @@ type InventoryPage = {
     market_hash_name?: string;
     icon_url?: string;
     marketable?: number;
+    tags?: {
+      category?: string;
+      internal_name?: string;
+      localized_tag_name?: string;
+    }[];
   }[];
   more_items?: number;
   last_assetid?: string;
@@ -364,6 +372,24 @@ function economyImage(iconPath: string) {
     return iconPath;
   }
   return `https://community.cloudflare.steamstatic.com/economy/image/${iconPath}`;
+}
+
+function tagValue(
+  tags: NonNullable<InventoryPage['descriptions']>[number]['tags'],
+  category: string,
+) {
+  const tag = tags?.find((item) => item.category === category);
+  return tag?.localized_tag_name?.trim() || '';
+}
+
+function itemMetaFromTags(
+  tags: NonNullable<InventoryPage['descriptions']>[number]['tags'],
+) {
+  return {
+    typeLabel: tagValue(tags, 'Type'),
+    rarity: tagValue(tags, 'Rarity'),
+    exterior: tagValue(tags, 'Exterior'),
+  };
 }
 
 async function fetchCs2Inventory(steamId: string): Promise<{
@@ -438,6 +464,7 @@ async function fetchCs2Inventory(steamId: string): Promise<{
         descriptions.get(`${asset.classid}_${asset.instanceid ?? '0'}`) ??
         descriptions.get(`${asset.classid}_0`);
       const amount = Math.max(1, Number(asset.amount ?? '1') || 1);
+      const meta = itemMetaFromTags(desc?.tags);
       items.push({
         assetId: asset.assetid,
         classId: asset.classid,
@@ -447,6 +474,9 @@ async function fetchCs2Inventory(steamId: string): Promise<{
         iconUrl: economyImage(desc?.icon_url ?? ''),
         amount,
         marketable: Boolean(desc?.marketable),
+        typeLabel: meta.typeLabel,
+        rarity: meta.rarity,
+        exterior: meta.exterior,
       });
     }
 
@@ -457,6 +487,50 @@ async function fetchCs2Inventory(steamId: string): Promise<{
   }
 
   return { hidden: false, items };
+}
+
+let bulkPriceCache: { at: number; map: Map<string, number> } | null = null;
+
+async function fetchBulkMarketPricesUsd(): Promise<Map<string, number>> {
+  if (bulkPriceCache && Date.now() - bulkPriceCache.at < 6 * 60 * 60 * 1000) {
+    return bulkPriceCache.map;
+  }
+
+  const response = await fetch('https://market.csgo.com/api/v2/prices/USD.json', {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+    },
+  });
+
+  if (!response.ok) {
+    return bulkPriceCache?.map ?? new Map();
+  }
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    items?: { market_hash_name?: string; price?: string | number }[];
+  };
+
+  if (!data.success || !Array.isArray(data.items)) {
+    return bulkPriceCache?.map ?? new Map();
+  }
+
+  const map = new Map<string, number>();
+  for (const item of data.items) {
+    const name = item.market_hash_name?.trim();
+    if (!name) {
+      continue;
+    }
+    const value = Number(item.price);
+    if (!Number.isFinite(value) || value <= 0) {
+      continue;
+    }
+    map.set(name, Math.round(value * 100) / 100);
+  }
+
+  bulkPriceCache = { at: Date.now(), map };
+  return map;
 }
 
 async function fetchMarketPriceUsd(
@@ -518,6 +592,7 @@ export {
   fetchGamesMeta,
   fetchPlayerSummary,
   fetchCs2Inventory,
+  fetchBulkMarketPricesUsd,
   fetchMarketPriceUsd,
   sleep,
   headerImage,

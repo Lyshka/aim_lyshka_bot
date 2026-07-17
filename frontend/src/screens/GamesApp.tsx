@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   api,
   type GamesOverview,
@@ -439,36 +439,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
                 публичными, затем открой вкладку снова.
               </section>
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <StatCard
-                    label="Предметов"
-                    value={inventory?.itemsCount ?? 0}
-                  />
-                  <StatCard
-                    label="Сумма"
-                    value={formatUsd(inventory?.totalValueUsd ?? 0)}
-                    accent="#1b2838"
-                  />
-                </div>
-                {(inventory?.items.length ?? 0) === 0 ? (
-                  <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                    Инвентарь CS2 пуст или ещё не загрузился
-                  </p>
-                ) : (
-                  <div
-                    className="grid gap-2"
-                    style={{
-                      gridTemplateColumns:
-                        'repeat(auto-fill, minmax(108px, 1fr))',
-                    }}
-                  >
-                    {inventory?.items.map((item) => (
-                      <InventoryCard key={item.id} item={item} />
-                    ))}
-                  </div>
-                )}
-              </>
+              <InventoryPanel items={inventory?.items ?? []} />
             )}
           </div>
         ) : null}
@@ -735,6 +706,295 @@ function GameCard({
   );
 }
 
+function itemTotal(item: InventoryItem) {
+  return item.totalUsd ?? (item.priceUsd != null ? item.priceUsd * item.amount : null);
+}
+
+function uniqueSorted(values: string[]) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'ru'),
+  );
+}
+
+type InvSort = 'price_desc' | 'price_asc' | 'name';
+type InvGroup = 'none' | 'type' | 'rarity' | 'exterior';
+type InvPriceFilter = 'all' | 'priced' | 'unpriced';
+
+function InventoryPanel({ items }: { items: InventoryItem[] }) {
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [rarityFilter, setRarityFilter] = useState('all');
+  const [exteriorFilter, setExteriorFilter] = useState('all');
+  const [priceFilter, setPriceFilter] = useState<InvPriceFilter>('all');
+  const [sort, setSort] = useState<InvSort>('price_desc');
+  const [groupBy, setGroupBy] = useState<InvGroup>('type');
+
+  const types = useMemo(
+    () => uniqueSorted(items.map((item) => item.typeLabel || 'Другое')),
+    [items],
+  );
+  const rarities = useMemo(
+    () => uniqueSorted(items.map((item) => item.rarity)),
+    [items],
+  );
+  const exteriors = useMemo(
+    () => uniqueSorted(items.map((item) => item.exterior)),
+    [items],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const next = items.filter((item) => {
+      if (q) {
+        const hay = `${item.name} ${item.marketHashName}`.toLowerCase();
+        if (!hay.includes(q)) {
+          return false;
+        }
+      }
+      if (typeFilter !== 'all' && (item.typeLabel || 'Другое') !== typeFilter) {
+        return false;
+      }
+      if (rarityFilter !== 'all' && item.rarity !== rarityFilter) {
+        return false;
+      }
+      if (exteriorFilter !== 'all' && item.exterior !== exteriorFilter) {
+        return false;
+      }
+      const priced = itemTotal(item) != null;
+      if (priceFilter === 'priced' && !priced) {
+        return false;
+      }
+      if (priceFilter === 'unpriced' && priced) {
+        return false;
+      }
+      return true;
+    });
+
+    next.sort((a, b) => {
+      const aPrice = itemTotal(a);
+      const bPrice = itemTotal(b);
+      if (sort === 'name') {
+        return a.name.localeCompare(b.name, 'ru');
+      }
+      if (sort === 'price_asc') {
+        if (aPrice == null && bPrice == null) {
+          return a.name.localeCompare(b.name, 'ru');
+        }
+        if (aPrice == null) {
+          return 1;
+        }
+        if (bPrice == null) {
+          return -1;
+        }
+        return aPrice - bPrice;
+      }
+      if (aPrice == null && bPrice == null) {
+        return a.name.localeCompare(b.name, 'ru');
+      }
+      if (aPrice == null) {
+        return 1;
+      }
+      if (bPrice == null) {
+        return -1;
+      }
+      return bPrice - aPrice;
+    });
+
+    return next;
+  }, [
+    items,
+    query,
+    typeFilter,
+    rarityFilter,
+    exteriorFilter,
+    priceFilter,
+    sort,
+  ]);
+
+  const groups = useMemo(() => {
+    if (groupBy === 'none') {
+      return [{ key: 'all', title: '', items: filtered }];
+    }
+    const map = new Map<string, InventoryItem[]>();
+    for (const item of filtered) {
+      const key =
+        groupBy === 'type'
+          ? item.typeLabel || 'Другое'
+          : groupBy === 'rarity'
+            ? item.rarity || 'Без редкости'
+            : item.exterior || 'Без износа';
+      const list = map.get(key) ?? [];
+      list.push(item);
+      map.set(key, list);
+    }
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], 'ru'))
+      .map(([key, groupItems]) => ({
+        key,
+        title: key,
+        items: groupItems,
+      }));
+  }, [filtered, groupBy]);
+
+  const visibleTotal = useMemo(() => {
+    let sum = 0;
+    let count = 0;
+    for (const item of filtered) {
+      count += item.amount;
+      const price = itemTotal(item);
+      if (price != null) {
+        sum += price;
+      }
+    }
+    return {
+      count,
+      sum: Math.round(sum * 100) / 100,
+    };
+  }, [filtered]);
+
+  if (items.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+        Инвентарь CS2 пуст или ещё не загрузился
+      </p>
+    );
+  }
+
+  const selectStyle = {
+    background: 'var(--tg-bg)',
+    color: 'var(--tg-text)',
+  } as const;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard label="В фильтре" value={visibleTotal.count} />
+        <StatCard
+          label="Сумма"
+          value={formatUsd(visibleTotal.sum)}
+          accent="#1b2838"
+        />
+      </div>
+
+      <div
+        className="space-y-2 rounded-3xl px-3 py-3"
+        style={{
+          background: 'color-mix(in srgb, white 70%, #1b2838)',
+        }}
+      >
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск по названию"
+          className="w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
+          style={selectStyle}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="all">Тип: все</option>
+            {types.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <select
+            value={rarityFilter}
+            onChange={(e) => setRarityFilter(e.target.value)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="all">Редкость: все</option>
+            {rarities.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <select
+            value={exteriorFilter}
+            onChange={(e) => setExteriorFilter(e.target.value)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="all">Износ: все</option>
+            {exteriors.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <select
+            value={priceFilter}
+            onChange={(e) => setPriceFilter(e.target.value as InvPriceFilter)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="all">Цена: все</option>
+            <option value="priced">С ценой</option>
+            <option value="unpriced">Без цены</option>
+          </select>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as InvSort)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="price_desc">Сорт: дороже</option>
+            <option value="price_asc">Сорт: дешевле</option>
+            <option value="name">Сорт: имя</option>
+          </select>
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as InvGroup)}
+            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="type">Группы: тип</option>
+            <option value="rarity">Группы: редкость</option>
+            <option value="exterior">Группы: износ</option>
+            <option value="none">Без групп</option>
+          </select>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+          Ничего не найдено по фильтрам
+        </p>
+      ) : (
+        groups.map((group) => (
+          <section key={group.key} className="space-y-2">
+            {group.title ? (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-sm font-semibold">{group.title}</p>
+                <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+                  {group.items.reduce((sum, item) => sum + item.amount, 0)} шт.
+                </p>
+              </div>
+            ) : null}
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))',
+              }}
+            >
+              {group.items.map((item) => (
+                <InventoryCard key={item.id} item={item} />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
 function InventoryIcon({ src }: { src: string }) {
   const [broken, setBroken] = useState(!src);
   return (
@@ -786,6 +1046,11 @@ function InventoryCard({ item }: { item: InventoryItem }) {
       <p className="line-clamp-2 min-h-[2.5rem] text-center text-[11px] font-semibold leading-snug">
         {item.name}
       </p>
+      {item.exterior ? (
+        <p className="text-center text-[10px]" style={{ color: 'var(--tg-hint)' }}>
+          {item.exterior}
+        </p>
+      ) : null}
       <p
         className="text-center text-xs font-semibold"
         style={{ color: price != null ? 'var(--tg-text)' : 'var(--tg-hint)' }}

@@ -234,6 +234,9 @@ export type InventoryItem = {
   iconUrl: string;
   amount: number;
   marketable: boolean;
+  typeLabel: string;
+  rarity: string;
+  exterior: string;
   priceUsd: number | null;
   totalUsd: number | null;
 };

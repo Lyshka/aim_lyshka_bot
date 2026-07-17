@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  fetchBulkMarketPricesUsd,
   fetchCs2Inventory,
   fetchGamesMeta,
   fetchMarketPriceUsd,
@@ -468,7 +469,7 @@ export class GamesService {
     const names = [
       ...new Set(
         result.items
-          .filter((item) => item.marketable && item.marketHashName)
+          .filter((item) => item.marketHashName)
           .map((item) => item.marketHashName),
       ),
     ];
@@ -479,15 +480,36 @@ export class GamesService {
       where: { marketHashName: { in: names } },
     });
     for (const row of cached) {
-      if (row.updatedAt >= staleBefore) {
+      if (row.updatedAt >= staleBefore && row.priceUsd != null) {
         priceMap.set(row.marketHashName, row.priceUsd);
       }
     }
 
+    const bulk = await fetchBulkMarketPricesUsd();
     for (const name of names) {
       if (priceMap.has(name)) {
         continue;
       }
+      const bulkPrice = bulk.get(name);
+      if (bulkPrice != null) {
+        priceMap.set(name, bulkPrice);
+        await this.prisma.steamMarketPrice.upsert({
+          where: { marketHashName: name },
+          create: {
+            marketHashName: name,
+            priceUsd: bulkPrice,
+            updatedAt: now,
+          },
+          update: {
+            priceUsd: bulkPrice,
+            updatedAt: now,
+          },
+        });
+      }
+    }
+
+    const missing = names.filter((name) => !priceMap.has(name));
+    for (const name of missing.slice(0, 40)) {
       const price = await fetchMarketPriceUsd(name);
       priceMap.set(name, price);
       await this.prisma.steamMarketPrice.upsert({
@@ -502,16 +524,15 @@ export class GamesService {
           updatedAt: now,
         },
       });
-      await sleep(350);
+      await sleep(250);
     }
 
     const keepAssetIds: string[] = [];
     for (const item of result.items) {
       keepAssetIds.push(item.assetId);
-      const priceUsd =
-        item.marketable && item.marketHashName
-          ? (priceMap.get(item.marketHashName) ?? null)
-          : null;
+      const priceUsd = item.marketHashName
+        ? (priceMap.get(item.marketHashName) ?? null)
+        : null;
 
       await this.prisma.steamInventoryItem.upsert({
         where: {
@@ -530,6 +551,9 @@ export class GamesService {
           iconUrl: item.iconUrl,
           amount: item.amount,
           marketable: item.marketable,
+          typeLabel: item.typeLabel,
+          rarity: item.rarity,
+          exterior: item.exterior,
           priceUsd,
           updatedAt: now,
         },
@@ -541,6 +565,9 @@ export class GamesService {
           iconUrl: item.iconUrl,
           amount: item.amount,
           marketable: item.marketable,
+          typeLabel: item.typeLabel,
+          rarity: item.rarity,
+          exterior: item.exterior,
           priceUsd,
           updatedAt: now,
         },
@@ -567,6 +594,45 @@ export class GamesService {
         lastInventorySyncAt: now,
       },
     });
+  }
+
+  async repriceMissingItems(profileId: string) {
+    const rows = await this.prisma.steamInventoryItem.findMany({
+      where: {
+        steamProfileId: profileId,
+        priceUsd: null,
+        marketHashName: { not: '' },
+      },
+      select: { id: true, marketHashName: true },
+    });
+    if (rows.length === 0) {
+      return;
+    }
+
+    const bulk = await fetchBulkMarketPricesUsd();
+    const now = new Date();
+    for (const row of rows) {
+      const price = bulk.get(row.marketHashName);
+      if (price == null) {
+        continue;
+      }
+      await this.prisma.steamInventoryItem.update({
+        where: { id: row.id },
+        data: { priceUsd: price, updatedAt: now },
+      });
+      await this.prisma.steamMarketPrice.upsert({
+        where: { marketHashName: row.marketHashName },
+        create: {
+          marketHashName: row.marketHashName,
+          priceUsd: price,
+          updatedAt: now,
+        },
+        update: {
+          priceUsd: price,
+          updatedAt: now,
+        },
+      });
+    }
   }
 
   async getInventory(userId: number) {
@@ -597,12 +663,27 @@ export class GamesService {
         Date.now() - active.lastInventorySyncAt.getTime() >
           12 * 60 * 60 * 1000;
 
-      if (stale) {
+      const needsMeta =
+        (await this.prisma.steamInventoryItem.count({
+          where: {
+            steamProfileId: active.id,
+            marketHashName: { not: '' },
+            typeLabel: '',
+          },
+        })) > 0;
+
+      if (stale || needsMeta) {
         try {
           await this.syncInventory(active.id, active.steamId);
         } catch {
           //
         }
+      }
+
+      try {
+        await this.repriceMissingItems(active.id);
+      } catch {
+        //
       }
 
       const fresh = await this.prisma.steamProfile.findUnique({
@@ -659,6 +740,9 @@ export class GamesService {
           iconUrl: item.iconUrl,
           amount: item.amount,
           marketable: item.marketable,
+          typeLabel: item.typeLabel || 'Другое',
+          rarity: item.rarity || '',
+          exterior: item.exterior || '',
           priceUsd: item.priceUsd,
           totalUsd:
             item.priceUsd != null

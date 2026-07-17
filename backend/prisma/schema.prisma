@@ -205,6 +205,9 @@ model SteamInventoryItem {
   iconUrl        String       @default("")
   amount         Int          @default(1)
   marketable     Boolean      @default(false)
+  typeLabel      String       @default("")
+  rarity         String       @default("")
+  exterior       String       @default("")
   priceUsd       Float?
   updatedAt      DateTime     @updatedAt
   steamProfile   SteamProfile @relation(fields: [steamProfileId], references: [id], onDelete: Cascade)
@@ -212,6 +215,7 @@ model SteamInventoryItem {
   @@unique([steamProfileId, assetId])
   @@index([steamProfileId])
   @@index([steamProfileId, marketable])
+  @@index([steamProfileId, typeLabel])
 }
 
 model SteamMarketPrice {
