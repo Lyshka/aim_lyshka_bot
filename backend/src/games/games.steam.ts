@@ -161,8 +161,8 @@ async function fetchWishlist(
     `https://store.steampowered.com/wishlist/profiles/${steamId}/wishlistdata/`,
     {
       headers: {
-        Accept: 'application/json',
-        'User-Agent': 'lyshka-service/1.0',
+        Accept: 'application/json,text/plain,*/*',
+        'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
       },
     },
   );
@@ -177,10 +177,29 @@ async function fetchWishlist(
     throw new ForbiddenException('Не удалось загрузить wishlist из Steam');
   }
 
-  const data = (await response.json()) as Record<string, WishlistEntry>;
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return new Map();
+  }
+
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new ForbiddenException(
+      'Steam вернул некорректный ответ. Проверь, что профиль и wishlist публичные.',
+    );
+  }
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return new Map();
+  }
+
   const map = new Map<string, WishlistEntry>();
-  for (const [appId, entry] of Object.entries(data)) {
-    if (/^\d+$/.test(appId)) {
+  for (const [appId, entry] of Object.entries(
+    data as Record<string, WishlistEntry>,
+  )) {
+    if (/^\d+$/.test(appId) && entry && typeof entry === 'object') {
       map.set(appId, entry);
     }
   }

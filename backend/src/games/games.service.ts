@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -59,132 +63,174 @@ export class GamesService {
   }
 
   async overview(userId: number) {
-    const uid = BigInt(userId);
-    const profile = await this.prisma.steamProfile.findUnique({
-      where: { userId: uid },
-    });
+    try {
+      const uid = BigInt(userId);
+      const profile = await this.prisma.steamProfile.findUnique({
+        where: { userId: uid },
+      });
 
-    const games = profile
-      ? await this.prisma.steamWishlistGame.findMany({
-          where: { userId: uid },
-          orderBy: [{ owned: 'asc' }, { priority: 'asc' }, { name: 'asc' }],
-        })
-      : [];
+      const games = profile
+        ? await this.prisma.steamWishlistGame.findMany({
+            where: { userId: uid },
+            orderBy: [{ owned: 'asc' }, { priority: 'asc' }, { name: 'asc' }],
+          })
+        : [];
 
-    const owned = games.filter((g) => g.owned);
-    const missing = games.filter((g) => !g.owned);
+      const owned = games.filter((g) => g.owned);
+      const missing = games.filter((g) => !g.owned);
 
-    return {
-      steamConfigured: Boolean(this.steamApiKey()),
-      profile: profile ? serializeProfile(profile) : null,
-      stats: {
-        total: games.length,
-        owned: owned.length,
-        missing: missing.length,
-      },
-      owned: owned.map(serializeGame),
-      missing: missing.map(serializeGame),
-    };
+      return {
+        steamConfigured: Boolean(this.steamApiKey()),
+        profile: profile ? serializeProfile(profile) : null,
+        stats: {
+          total: games.length,
+          owned: owned.length,
+          missing: missing.length,
+        },
+        owned: owned.map(serializeGame),
+        missing: missing.map(serializeGame),
+      };
+    } catch (err) {
+      this.rethrowDbError(err);
+    }
   }
 
   async linkProfile(userId: number, steamInput: string) {
-    const apiKey = this.steamApiKey();
-    parseSteamInput(steamInput);
-    const steamId = await resolveSteamId(steamInput, apiKey);
-    const parsed = parseSteamInput(steamInput);
-    const vanityUrl = parsed.vanity ?? null;
+    try {
+      const apiKey = this.steamApiKey();
+      parseSteamInput(steamInput);
+      const steamId = await resolveSteamId(steamInput, apiKey);
+      const parsed = parseSteamInput(steamInput);
+      const vanityUrl = parsed.vanity ?? null;
 
-    const profile = await this.prisma.steamProfile.upsert({
-      where: { userId: BigInt(userId) },
-      create: {
-        userId: BigInt(userId),
-        steamId,
-        vanityUrl,
-      },
-      update: {
-        steamId,
-        vanityUrl,
-      },
-    });
-
-    return this.sync(userId, profile);
-  }
-
-  async sync(userId: number, existingProfile?: {
-    steamId: string;
-    vanityUrl: string | null;
-  }) {
-    const apiKey = this.steamApiKey();
-    const uid = BigInt(userId);
-
-    const profile =
-      existingProfile ??
-      (await this.prisma.steamProfile.findUnique({
-        where: { userId: uid },
-      }));
-
-    if (!profile) {
-      throw new NotFoundException('Сначала привяжи Steam профиль');
-    }
-
-    const [wishlist, ownedIds] = await Promise.all([
-      fetchWishlist(profile.steamId),
-      fetchOwnedAppIds(profile.steamId, apiKey),
-    ]);
-
-    const appIds = [...wishlist.keys()];
-    const meta = await fetchGamesMeta(appIds);
-    const now = new Date();
-
-    for (const appId of appIds) {
-      const entry = wishlist.get(appId);
-      const details = meta.get(appId);
-      const owned = ownedIds.has(Number(appId));
-
-      await this.prisma.steamWishlistGame.upsert({
-        where: {
-          userId_appId: {
-            userId: uid,
-            appId,
-          },
-        },
+      const profile = await this.prisma.steamProfile.upsert({
+        where: { userId: BigInt(userId) },
         create: {
-          userId: uid,
-          appId,
-          name: details?.name ?? `Игра ${appId}`,
-          imageUrl: details?.imageUrl ?? '',
-          owned,
-          priority: entry?.priority ?? 0,
-          addedAt: entry?.added ? new Date(entry.added * 1000) : null,
-          updatedAt: now,
+          userId: BigInt(userId),
+          steamId,
+          vanityUrl,
         },
         update: {
-          name: details?.name ?? `Игра ${appId}`,
-          imageUrl: details?.imageUrl ?? '',
-          owned,
-          priority: entry?.priority ?? 0,
-          addedAt: entry?.added ? new Date(entry.added * 1000) : null,
-          updatedAt: now,
+          steamId,
+          vanityUrl,
         },
       });
+
+      return this.sync(userId, profile);
+    } catch (err) {
+      this.rethrowDbError(err);
     }
+  }
 
-    await this.prisma.steamWishlistGame.deleteMany({
-      where: {
-        userId: uid,
-        appId: { notIn: appIds },
-      },
-    });
+  async sync(
+    userId: number,
+    existingProfile?: {
+      steamId: string;
+      vanityUrl: string | null;
+    },
+  ) {
+    try {
+      const apiKey = this.steamApiKey();
+      const uid = BigInt(userId);
 
-    await this.prisma.steamProfile.update({
-      where: { userId: uid },
-      data: { lastSyncAt: now },
-    });
+      const profile =
+        existingProfile ??
+        (await this.prisma.steamProfile.findUnique({
+          where: { userId: uid },
+        }));
 
-    return this.overview(userId);
+      if (!profile) {
+        throw new NotFoundException('Сначала привяжи Steam профиль');
+      }
+
+      const [wishlist, ownedIds] = await Promise.all([
+        fetchWishlist(profile.steamId),
+        fetchOwnedAppIds(profile.steamId, apiKey),
+      ]);
+
+      const appIds = [...wishlist.keys()];
+      const meta = await fetchGamesMeta(appIds);
+      const now = new Date();
+
+      for (const appId of appIds) {
+        const entry = wishlist.get(appId);
+        const details = meta.get(appId);
+        const owned = ownedIds.has(Number(appId));
+
+        await this.prisma.steamWishlistGame.upsert({
+          where: {
+            userId_appId: {
+              userId: uid,
+              appId,
+            },
+          },
+          create: {
+            userId: uid,
+            appId,
+            name: details?.name ?? `Игра ${appId}`,
+            imageUrl: details?.imageUrl ?? '',
+            owned,
+            priority: entry?.priority ?? 0,
+            addedAt: entry?.added ? new Date(entry.added * 1000) : null,
+            updatedAt: now,
+          },
+          update: {
+            name: details?.name ?? `Игра ${appId}`,
+            imageUrl: details?.imageUrl ?? '',
+            owned,
+            priority: entry?.priority ?? 0,
+            addedAt: entry?.added ? new Date(entry.added * 1000) : null,
+            updatedAt: now,
+          },
+        });
+      }
+
+      if (appIds.length === 0) {
+        await this.prisma.steamWishlistGame.deleteMany({
+          where: { userId: uid },
+        });
+      } else {
+        await this.prisma.steamWishlistGame.deleteMany({
+          where: {
+            userId: uid,
+            appId: { notIn: appIds },
+          },
+        });
+      }
+
+      await this.prisma.steamProfile.update({
+        where: { userId: uid },
+        data: { lastSyncAt: now },
+      });
+
+      return this.overview(userId);
+    } catch (err) {
+      this.rethrowDbError(err);
+    }
   }
 
   async resync(userId: number) {
     return this.sync(userId);
+  }
+
+  private rethrowDbError(err: unknown): never {
+    const code =
+      err && typeof err === 'object' && 'code' in err
+        ? String((err as { code?: string }).code)
+        : '';
+    const message =
+      err && typeof err === 'object' && 'message' in err
+        ? String((err as { message?: string }).message)
+        : '';
+    if (
+      code === 'P2021' ||
+      message.includes('SteamProfile') ||
+      message.includes('SteamWishlistGame')
+    ) {
+      throw new BadRequestException(
+        'Таблицы игр не созданы. Перезапусти backend — миграция должна примениться автоматически.',
+      );
+    }
+    throw err;
   }
 }

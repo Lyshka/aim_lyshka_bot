@@ -109,8 +109,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Ошибка ${response.status}`);
+    const raw = await response.text();
+    try {
+      const parsed = JSON.parse(raw) as { message?: string | string[] };
+      if (parsed.message) {
+        throw new Error(
+          Array.isArray(parsed.message)
+            ? parsed.message.join(', ')
+            : parsed.message,
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== raw) {
+        throw err;
+      }
+    }
+    throw new Error(raw || `Ошибка ${response.status}`);
   }
 
   return response.json() as Promise<T>;
