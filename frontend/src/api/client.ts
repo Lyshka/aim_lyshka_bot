@@ -193,14 +193,19 @@ export type SteamGame = {
 };
 
 export type SteamProfile = {
+  id: string;
   steamId: string;
   vanityUrl: string | null;
+  personaName: string;
+  avatarUrl: string;
+  active: boolean;
   profileUrl: string;
   lastSyncAt: string | null;
 };
 
 export type GamesOverview = {
   steamConfigured: boolean;
+  profiles: SteamProfile[];
   profile: SteamProfile | null;
   stats: {
     total: number;
@@ -263,10 +268,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, steamInput }),
     }),
-  gamesSync: (initData: string) =>
-    request<GamesOverview>('/api/games/sync', {
+  gamesSelect: (initData: string, profileId: string) =>
+    request<GamesOverview>('/api/games/select', {
       method: 'POST',
-      body: JSON.stringify({ initData }),
+      body: JSON.stringify({ initData, profileId }),
+    }),
+  gamesDelete: (initData: string, profileId: string) =>
+    request<GamesOverview>('/api/games/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, profileId }),
     }),
   healthManual: (
     initData: string,

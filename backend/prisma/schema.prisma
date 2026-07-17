@@ -22,7 +22,7 @@ model User {
   appGrants    UserAppGrant[]
   healthDays   HealthDay[]
   catPosts     CatPost[]
-  steamProfile SteamProfile?
+  steamProfiles SteamProfile[]
   steamGames   SteamWishlistGame[]
 }
 
@@ -152,31 +152,41 @@ model HealthDay {
 }
 
 model SteamProfile {
-  id         String   @id @default(cuid())
-  userId     BigInt   @unique
-  steamId    String
-  vanityUrl  String?
-  lastSyncAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String              @id @default(cuid())
+  userId      BigInt
+  steamId     String
+  vanityUrl   String?
+  personaName String              @default("")
+  avatarUrl   String              @default("")
+  active      Boolean             @default(false)
+  lastSyncAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  games       SteamWishlistGame[]
 
+  @@unique([userId, steamId])
+  @@index([userId])
   @@index([steamId])
+  @@index([userId, active])
 }
 
 model SteamWishlistGame {
-  id        String   @id @default(cuid())
-  userId    BigInt
-  appId     String
-  name      String
-  imageUrl  String   @default("")
-  owned     Boolean  @default(false)
-  priority  Int      @default(0)
-  addedAt   DateTime?
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         BigInt
+  steamProfileId String
+  appId          String
+  name           String
+  imageUrl       String       @default("")
+  owned          Boolean      @default(false)
+  priority       Int          @default(0)
+  addedAt        DateTime?
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steamProfile   SteamProfile @relation(fields: [steamProfileId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, appId])
+  @@unique([steamProfileId, appId])
   @@index([userId, owned])
-  @@index([userId, priority])
+  @@index([steamProfileId, owned])
+  @@index([steamProfileId, priority])
 }

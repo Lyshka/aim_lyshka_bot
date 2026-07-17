@@ -15,3 +15,13 @@ export class GamesLinkDto {
   @MinLength(2)
   steamInput!: string;
 }
+
+export class GamesProfileDto {
+  @IsOptional()
+  @IsString()
+  initData?: string;
+
+  @IsString()
+  @MinLength(1)
+  profileId!: string;
+}

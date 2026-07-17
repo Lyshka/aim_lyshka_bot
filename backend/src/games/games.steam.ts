@@ -287,11 +287,48 @@ async function fetchGamesMeta(appIds: string[]) {
   return result;
 }
 
+async function fetchPlayerSummary(
+  steamId: string,
+  apiKey: string,
+): Promise<{ personaName: string; avatarUrl: string }> {
+  if (!apiKey) {
+    return { personaName: steamId, avatarUrl: '' };
+  }
+
+  const response = await fetch(
+    `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${encodeURIComponent(apiKey)}&steamids=${encodeURIComponent(steamId)}`,
+  );
+  if (!response.ok) {
+    return { personaName: steamId, avatarUrl: '' };
+  }
+
+  const data = (await response.json()) as {
+    response?: {
+      players?: {
+        personaname?: string;
+        avatarfull?: string;
+        avatarmedium?: string;
+        avatar?: string;
+      }[];
+    };
+  };
+  const player = data.response?.players?.[0];
+  return {
+    personaName: player?.personaname?.trim() || steamId,
+    avatarUrl:
+      player?.avatarfull ||
+      player?.avatarmedium ||
+      player?.avatar ||
+      '',
+  };
+}
+
 export {
   parseSteamInput,
   resolveSteamId,
   fetchOwnedGames,
   fetchWishlist,
   fetchGamesMeta,
+  fetchPlayerSummary,
   headerImage,
 };

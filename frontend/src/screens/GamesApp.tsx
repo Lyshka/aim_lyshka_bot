@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type GamesOverview, type SteamGame } from '../api/client';
+import {
+  api,
+  type GamesOverview,
+  type SteamGame,
+  type SteamProfile,
+} from '../api/client';
 import { Shell } from '../components/Shell';
 import { useTelegram } from '../telegram/TelegramProvider';
 
@@ -33,6 +38,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('home');
   const [steamInput, setSteamInput] = useState('');
+  const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -40,6 +46,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
     setError(null);
     const overview = await api.gamesOverview(initData);
     setData(overview);
+    setAdding(overview.profiles.length === 0);
     return overview;
   }, [initData]);
 
@@ -66,7 +73,9 @@ export function GamesApp({ onBack }: GamesAppProps) {
     try {
       const overview = await api.gamesLink(initData, steamInput.trim());
       setData(overview);
-      setStatus('Steam привязан, wishlist загружен');
+      setSteamInput('');
+      setAdding(false);
+      setStatus('Аккаунт добавлен');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Ошибка привязки');
     } finally {
@@ -74,16 +83,31 @@ export function GamesApp({ onBack }: GamesAppProps) {
     }
   }
 
-  async function syncSteam() {
+  async function selectAccount(profileId: string) {
     setBusy(true);
     setStatus(null);
-    haptic('medium');
+    haptic('light');
     try {
-      const overview = await api.gamesSync(initData);
+      const overview = await api.gamesSelect(initData, profileId);
       setData(overview);
-      setStatus('Список обновлён');
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Ошибка синхронизации');
+      setStatus(err instanceof Error ? err.message : 'Ошибка выбора');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAccount(profileId: string) {
+    setBusy(true);
+    setStatus(null);
+    haptic('heavy');
+    try {
+      const overview = await api.gamesDelete(initData, profileId);
+      setData(overview);
+      setAdding(overview.profiles.length === 0);
+      setStatus('Аккаунт удалён');
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Ошибка удаления');
     } finally {
       setBusy(false);
     }
@@ -115,6 +139,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
 
   const list =
     tab === 'owned' ? data.owned : tab === 'missing' ? data.missing : [];
+  const hasAccounts = data.profiles.length > 0;
 
   return (
     <div className="relative mx-auto w-full max-w-md">
@@ -159,16 +184,59 @@ export function GamesApp({ onBack }: GamesAppProps) {
               </section>
             ) : null}
 
-            {!data.profile ? (
+            {hasAccounts ? (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Всего" value={data.stats.total} />
+                  <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
+                  <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
+                </div>
+
+                <section className="space-y-2">
+                  <p className="px-1 text-sm font-medium">Аккаунты Steam</p>
+                  {data.profiles.map((profile) => (
+                    <AccountCard
+                      key={profile.id}
+                      profile={profile}
+                      busy={busy}
+                      onSelect={() => void selectAccount(profile.id)}
+                      onDelete={() => void deleteAccount(profile.id)}
+                    />
+                  ))}
+                </section>
+
+                {!adding ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setAdding(true);
+                      setStatus(null);
+                    }}
+                    className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
+                    style={{
+                      background: 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
+                    }}
+                  >
+                    Добавить аккаунт
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+
+            {adding || !hasAccounts ? (
               <section
                 className="space-y-3 rounded-3xl px-5 py-4"
                 style={{
                   background: 'color-mix(in srgb, white 70%, #1b2838)',
                 }}
               >
-                <p className="text-sm font-medium">Привязка Steam</p>
+                <p className="text-sm font-medium">
+                  {hasAccounts ? 'Новый Steam аккаунт' : 'Привязка Steam'}
+                </p>
                 <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                  Вставь ссылку на профиль, Steam ID (7656...) или custom URL (ник).
+                  Вставь ссылку на профиль, Steam ID или ник. После добавления ссылку
+                  изменить нельзя — только удалить аккаунт.
                 </p>
                 <input
                   value={steamInput}
@@ -177,79 +245,76 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   className="w-full rounded-xl border-0 px-3 py-2.5 outline-none"
                   style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
                 />
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void linkSteam()}
-                  className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
-                  style={{
-                    background: 'linear-gradient(145deg, #1b2838, #2a475e)',
-                    color: '#c7d5e0',
-                  }}
-                >
-                  Привязать и загрузить wishlist
-                </button>
-              </section>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Всего" value={data.stats.total} />
-                  <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
-                  <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
-                </div>
-
-                <section
-                  className="space-y-3 rounded-3xl px-5 py-4"
-                  style={{
-                    background: 'color-mix(in srgb, white 70%, #1b2838)',
-                  }}
-                >
-                  <p className="text-sm font-medium">Steam профиль</p>
-                  <p className="text-sm break-all" style={{ color: 'var(--tg-hint)' }}>
-                    {data.profile.profileUrl}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-                    Обновлено: {formatSync(data.profile.lastSyncAt)}
-                  </p>
+                <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void syncSteam()}
-                    className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
+                    onClick={() => void linkSteam()}
+                    className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
                     style={{
                       background: 'linear-gradient(145deg, #1b2838, #2a475e)',
                       color: '#c7d5e0',
                     }}
                   >
-                    Обновить из Steam
+                    Добавить
                   </button>
-                </section>
+                  {hasAccounts ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setAdding(false);
+                        setSteamInput('');
+                      }}
+                      className="rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
+                      style={{
+                        background: 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
+                      }}
+                    >
+                      Отмена
+                    </button>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
 
-                <section
-                  className="rounded-3xl px-5 py-4 text-sm"
-                  style={{ background: 'var(--tg-secondary)' }}
-                >
-                  <p className="font-medium">Публичность в Steam</p>
-                  <ul className="mt-2 space-y-1" style={{ color: 'var(--tg-hint)' }}>
-                    <li>• Профиль — публичный</li>
-                    <li>• Список желаемого — виден всем</li>
-                    <li>• Список игр (библиотека) — публичный, иначе «Есть» будет пустым</li>
-                  </ul>
-                </section>
-              </>
-            )}
+            {data.profile ? (
+              <p className="text-center text-xs" style={{ color: 'var(--tg-hint)' }}>
+                Данные обновляются автоматически раз в день ·{' '}
+                {formatSync(data.profile.lastSyncAt)}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
         {tab === 'owned' || tab === 'missing' ? (
           <div className="space-y-3">
+            {data.profile ? (
+              <div
+                className="flex items-center gap-3 rounded-2xl px-3 py-2"
+                style={{
+                  background: 'color-mix(in srgb, white 70%, #1b2838)',
+                }}
+              >
+                <AccountAvatar profile={data.profile} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {data.profile.personaName}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+                    {tab === 'owned' ? 'Библиотека' : 'Wishlist'}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {list.length === 0 ? (
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
                 {data.profile
                   ? tab === 'owned'
                     ? 'В библиотеке пока пусто или список игр скрыт в Steam'
-                    : 'Wishlist пуст — все желаемые игры уже куплены или список пустой'
-                  : 'Сначала привяжи Steam на вкладке «Обзор»'}
+                    : 'Wishlist пуст'
+                  : 'Сначала добавь Steam аккаунт на вкладке «Обзор»'}
               </p>
             ) : (
               list.map((game) => (
@@ -278,6 +343,77 @@ export function GamesApp({ onBack }: GamesAppProps) {
   );
 }
 
+function AccountAvatar({ profile }: { profile: SteamProfile }) {
+  const [broken, setBroken] = useState(!profile.avatarUrl);
+  return broken ? (
+    <div
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+      style={{ background: '#1b2838', color: '#66c0f4' }}
+    >
+      {(profile.personaName || 'S').slice(0, 1).toUpperCase()}
+    </div>
+  ) : (
+    <img
+      src={profile.avatarUrl}
+      alt=""
+      className="h-11 w-11 shrink-0 rounded-full object-cover"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function AccountCard({
+  profile,
+  busy,
+  onSelect,
+  onDelete,
+}: {
+  profile: SteamProfile;
+  busy: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <article
+      className="rounded-[24px] px-3 py-3"
+      style={{
+        background: profile.active
+          ? 'color-mix(in srgb, #66c0f4 22%, white)'
+          : 'color-mix(in srgb, white 70%, #1b2838)',
+        outline: profile.active ? '2px solid #66c0f4' : 'none',
+      }}
+    >
+      <button
+        type="button"
+        disabled={busy || profile.active}
+        onClick={onSelect}
+        className="flex w-full items-center gap-3 text-left disabled:opacity-100"
+      >
+        <AccountAvatar profile={profile} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{profile.personaName}</p>
+          <p className="truncate text-xs" style={{ color: 'var(--tg-hint)' }}>
+            {profile.active ? 'Выбран' : 'Нажми, чтобы выбрать'} ·{' '}
+            {formatSync(profile.lastSyncAt)}
+          </p>
+        </div>
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onDelete}
+        className="mt-2 w-full rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
+        style={{
+          background: 'color-mix(in srgb, #b42318 14%, transparent)',
+          color: '#b42318',
+        }}
+      >
+        Удалить аккаунт
+      </button>
+    </article>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -294,7 +430,10 @@ function StatCard({
         background: 'color-mix(in srgb, white 72%, #66c0f4)',
       }}
     >
-      <p className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: 'var(--tg-hint)' }}>
+      <p
+        className="text-[11px] font-semibold tracking-wide uppercase"
+        style={{ color: 'var(--tg-hint)' }}
+      >
         {label}
       </p>
       <p
