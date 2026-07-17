@@ -45,6 +45,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'stats',
+    name: 'Статистика',
+    description: 'CS2 / Faceit / Leetify по Steam профилю',
+    icon: 'stats',
+    color: '#0e7490',
+    sortOrder: 50,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

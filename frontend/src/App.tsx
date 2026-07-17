@@ -10,6 +10,7 @@ import { GamesApp } from './screens/GamesApp';
 import { HealthApp } from './screens/HealthApp';
 import { LauncherScreen } from './screens/LauncherScreen';
 import { MedsApp } from './screens/MedsApp';
+import { StatsApp } from './screens/StatsApp';
 import { TelegramProvider, useTelegram } from './telegram/TelegramProvider';
 
 function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
@@ -27,6 +28,9 @@ function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
   }
   if (app.slug === 'games') {
     return 'games';
+  }
+  if (app.slug === 'stats') {
+    return 'stats';
   }
   if (app.slug === 'admin') {
     return 'admin';
@@ -85,6 +89,8 @@ function AppContent() {
     screen = <HealthApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'games') {
     screen = <GamesApp onBack={() => setActiveApp(null)} />;
+  } else if (activeApp?.slug === 'stats') {
+    screen = <StatsApp onBack={() => setActiveApp(null)} />;
   }
 
   return (

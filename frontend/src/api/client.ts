@@ -249,6 +249,106 @@ export type InventoryOverview = {
   items: InventoryItem[];
 };
 
+export type StatsLookup = {
+  steamId: string;
+  profileUrl: string;
+  steam: {
+    personaName: string;
+    avatarUrl: string;
+    bans: {
+      vacBanned: boolean;
+      communityBanned: boolean;
+      numberOfVacBans: number;
+      numberOfGameBans: number;
+      daysSinceLastBan: number;
+      economyBan: string;
+    } | null;
+    cs2: {
+      owned: boolean;
+      hoursForever: number | null;
+      hours2Weeks: number | null;
+    } | null;
+  } | null;
+  leetify: {
+    available: boolean;
+    privacyMode?: string;
+    name?: string | null;
+    winrate?: number | null;
+    totalMatches?: number;
+    firstMatchDate?: string | null;
+    bansCount?: number;
+    ranks?: {
+      leetify: number | null;
+      premier: number | null;
+      faceitLevel: number | null;
+      faceitElo: number | null;
+      wingman: number | null;
+      wingmanName: string;
+      renown: number | null;
+      competitive: { map: string; rank: number; rankName: string }[];
+    };
+    rating?: Record<string, number | null>;
+    stats?: Record<string, number | null>;
+    recentMatches?: {
+      id: string;
+      finishedAt: string | null;
+      source: string;
+      outcome: string;
+      map: string;
+      rank: number | null;
+      rankName: string;
+      leetifyRating: number | null;
+      score: number[];
+      headshotAccuracy: number | null;
+      sprayAccuracy: number | null;
+    }[];
+  } | null;
+  faceit: {
+    playerId: string;
+    nickname: string | null;
+    avatar: string | null;
+    country: string | null;
+    profileUrl: string | null;
+    cs2: {
+      level: number | null;
+      elo: number | null;
+      region: string | null;
+      name: string | null;
+      stats: Record<string, unknown> | null;
+    } | null;
+    csgo: {
+      level: number | null;
+      elo: number | null;
+      region: string | null;
+      name: string | null;
+      stats: Record<string, unknown> | null;
+    } | null;
+    bans: {
+      reason: string;
+      type: string;
+      startsAt: string | null;
+      endsAt: string | null;
+    }[];
+    recentMatches: {
+      matchId: string;
+      game: string;
+      mode: string;
+      competition: string;
+      map: string;
+      startedAt: string | null;
+      finishedAt: string | null;
+      result: string | null;
+      score: Record<string, number> | null;
+    }[];
+  } | null;
+  sources: {
+    steam: boolean;
+    leetify: boolean;
+    faceit: boolean;
+    faceitConfigured: boolean;
+  };
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -320,6 +420,11 @@ export const api = {
     request<InventoryOverview>('/api/games/inventory', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  statsLookup: (initData: string, steamInput: string) =>
+    request<StatsLookup>('/api/stats/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ initData, steamInput }),
     }),
   healthManual: (
     initData: string,

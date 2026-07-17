@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { MedsModule } from './meds/meds.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { StatsModule } from './stats/stats.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
     CatsModule,
     HealthModule,
     GamesModule,
+    StatsModule,
     AdminModule,
     BotModule,
     RemindersModule,
