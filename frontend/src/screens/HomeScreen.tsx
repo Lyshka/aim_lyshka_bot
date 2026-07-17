@@ -27,10 +27,16 @@ export function HomeScreen() {
     api
       .overview(initData)
       .then((overview) => {
-        if (alive) {
-          setData(overview);
-          setError(null);
+        if (!alive) {
+          return;
         }
+        if (user?.id != null && overview.ownerUserId !== user.id) {
+          setError('Ошибка сессии: данные другого пользователя');
+          setData(null);
+          return;
+        }
+        setData(overview);
+        setError(null);
       })
       .catch((err: Error) => {
         if (alive) {
@@ -40,7 +46,7 @@ export function HomeScreen() {
     return () => {
       alive = false;
     };
-  }, [initData]);
+  }, [initData, user?.id]);
 
   async function takeOne(id: string) {
     setBusyId(id);

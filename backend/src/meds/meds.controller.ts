@@ -24,30 +24,26 @@ export class MedsController {
     private readonly medsService: MedsService,
   ) {}
 
-  private async userId(initData?: string) {
-    const session = await this.authService.authenticateApp(
-      initData ?? '',
-      'meds',
-    );
-    return session.user.id;
+  private async session(initData?: string) {
+    return this.authService.authenticateApp(initData ?? '', 'meds');
   }
 
   @Post('overview')
   async overview(@Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.overview(userId);
+    const session = await this.session(dto.initData);
+    return this.medsService.overview(session.user.id);
   }
 
   @Post('list')
   async list(@Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.list(userId);
+    const session = await this.session(dto.initData);
+    return this.medsService.list(session.user.id);
   }
 
   @Post('history')
   async history(@Body() dto: HistoryQueryDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.history(userId, {
+    const session = await this.session(dto.initData);
+    return this.medsService.history(session.user.id, {
       from: dto.from,
       to: dto.to,
       medicationId: dto.medicationId,
@@ -59,8 +55,8 @@ export class MedsController {
 
   @Post('history/clear')
   async clearHistory(@Body() dto: ClearHistoryDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.clearHistory(userId, {
+    const session = await this.session(dto.initData);
+    return this.medsService.clearHistory(session.user.id, {
       from: dto.from,
       to: dto.to,
     });
@@ -68,56 +64,56 @@ export class MedsController {
 
   @Post('history/purge-deleted')
   async purgeDeleted(@Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.purgeDeleted(userId);
+    const session = await this.session(dto.initData);
+    return this.medsService.purgeDeleted(session.user.id);
   }
 
   @Post('history/:id/delete')
   async deleteIntake(@Param('id') id: string, @Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.deleteIntake(userId, id);
+    const session = await this.session(dto.initData);
+    return this.medsService.deleteIntake(session.user.id, id);
   }
 
   @Post('history/:id/restore')
   async restoreIntake(@Param('id') id: string, @Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.restoreIntake(userId, id);
+    const session = await this.session(dto.initData);
+    return this.medsService.restoreIntake(session.user.id, id);
   }
 
   @Post('settings')
   async updateSettings(@Body() dto: UpdateSettingsDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.updateSettings(userId, dto);
+    const session = await this.session(dto.initData);
+    return this.medsService.updateSettings(session.user.id, dto);
   }
 
   @Post('mute-today')
   async muteToday(@Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.muteToday(userId);
+    const session = await this.session(dto.initData);
+    return this.medsService.muteToday(session.user.id);
   }
 
   @Post('unmute')
   async unmute(@Body() dto: InitDataDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.unmute(userId);
+    const session = await this.session(dto.initData);
+    return this.medsService.unmute(session.user.id);
   }
 
   @Post()
   async create(@Body() dto: CreateMedicationDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.create(userId, dto);
+    const session = await this.session(dto.initData);
+    return this.medsService.create(session.user.id, dto);
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateMedicationDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.update(userId, id, dto);
+    const session = await this.session(dto.initData);
+    return this.medsService.update(session.user.id, id, dto);
   }
 
   @Post(':id/take')
   async take(@Param('id') id: string, @Body() dto: TakeMedicationDto) {
-    const userId = await this.userId(dto.initData);
-    return this.medsService.take(userId, id, {
+    const session = await this.session(dto.initData);
+    return this.medsService.take(session.user.id, id, {
       tabletsCount: dto.tabletsCount,
       note: dto.note,
     });

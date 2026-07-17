@@ -2,8 +2,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
+  OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   formatYmd,
   nextDueFromTake,
@@ -12,9 +13,73 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { serializeIntake, serializeMedication } from './meds.serializer';
 
+const LEGACY_SEEDED_MEDS = [
+  {
+    name: 'Ламотриджин',
+    tabletsCount: 5,
+    mgPerTablet: 250,
+    intervalDays: 2,
+  },
+  {
+    name: 'Энкорат хроно',
+    tabletsCount: 4,
+    mgPerTablet: 300,
+    intervalDays: 2,
+  },
+  {
+    name: 'Рисперидон',
+    tabletsCount: 1,
+    mgPerTablet: 4,
+    intervalDays: 2,
+  },
+] as const;
+
 @Injectable()
-export class MedsService {
-  constructor(private readonly prisma: PrismaService) {}
+export class MedsService implements OnModuleInit {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async onModuleInit() {
+    await this.purgeLegacySeededMedsEverywhere();
+  }
+
+  private getAdminIds(): number[] {
+    const raw = this.configService.get<string>('ADMIN_IDS') ?? '';
+    return raw
+      .split(',')
+      .map((id) => Number(id.trim()))
+      .filter((id) => Number.isFinite(id) && id > 0);
+  }
+
+  async purgeLegacySeededMedsEverywhere() {
+    const adminIds = this.getAdminIds().map((id) => BigInt(id));
+    const seeded = await this.prisma.medication.findMany({
+      where: {
+        OR: LEGACY_SEEDED_MEDS.map((item) => ({
+          name: item.name,
+          tabletsCount: item.tabletsCount,
+          mgPerTablet: item.mgPerTablet,
+          intervalDays: item.intervalDays,
+        })),
+        ...(adminIds.length > 0
+          ? { userId: { notIn: adminIds } }
+          : {}),
+      },
+      select: { id: true },
+    });
+    if (seeded.length === 0) {
+      return;
+    }
+    const ids = seeded.map((item) => item.id);
+    await this.prisma.medicationIntake.deleteMany({
+      where: { medicationId: { in: ids } },
+    });
+    await this.prisma.medication.deleteMany({
+      where: { id: { in: ids } },
+    });
+  }
 
   private async timezone(userId: number) {
     const settings = await this.prisma.userSettings.findUnique({
@@ -53,6 +118,7 @@ export class MedsService {
     const mutedToday = Boolean(mutedUntil && mutedUntil.getTime() > Date.now());
 
     return {
+      ownerUserId: userId,
       medications: meds,
       dueCount: meds.filter((m) => m.isDue).length,
       settings: settings
@@ -341,15 +407,12 @@ export class MedsService {
   }
 
   private async getOwnedIntake(userId: number, intakeId: string) {
-    const intake = await this.prisma.medicationIntake.findUnique({
-      where: { id: intakeId },
+    const intake = await this.prisma.medicationIntake.findFirst({
+      where: { id: intakeId, userId: BigInt(userId) },
       include: { medication: true },
     });
     if (!intake) {
       throw new NotFoundException('Запись не найдена');
-    }
-    if (intake.userId !== BigInt(userId)) {
-      throw new ForbiddenException('Нет доступа');
     }
     return intake;
   }
@@ -451,14 +514,11 @@ export class MedsService {
   }
 
   private async getOwned(userId: number, medicationId: string) {
-    const med = await this.prisma.medication.findUnique({
-      where: { id: medicationId },
+    const med = await this.prisma.medication.findFirst({
+      where: { id: medicationId, userId: BigInt(userId) },
     });
     if (!med) {
       throw new NotFoundException('Препарат не найден');
-    }
-    if (med.userId !== BigInt(userId)) {
-      throw new ForbiddenException('Нет доступа');
     }
     return med;
   }
