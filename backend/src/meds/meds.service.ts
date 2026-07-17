@@ -10,15 +10,11 @@ import {
   startOfNextLocalDay,
 } from '../common/calendar';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from '../users/users.service';
 import { serializeIntake, serializeMedication } from './meds.serializer';
 
 @Injectable()
 export class MedsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private async timezone(userId: number) {
     const settings = await this.prisma.userSettings.findUnique({
@@ -40,8 +36,6 @@ export class MedsService {
   }
 
   async overview(userId: number) {
-    await this.usersService.ensureDefaultMedications(BigInt(userId));
-
     const [meds, settings, recentIntakes] = await Promise.all([
       this.list(userId),
       this.prisma.userSettings.findUnique({

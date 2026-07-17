@@ -1,30 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-const DEFAULT_MEDS = [
-  {
-    name: 'Ламотриджин',
-    tabletsCount: 5,
-    mgPerTablet: 250,
-    intervalDays: 2,
-    sortOrder: 1,
-  },
-  {
-    name: 'Энкорат хроно',
-    tabletsCount: 4,
-    mgPerTablet: 300,
-    intervalDays: 2,
-    sortOrder: 2,
-  },
-  {
-    name: 'Рисперидон',
-    tabletsCount: 1,
-    mgPerTablet: 4,
-    intervalDays: 2,
-    sortOrder: 3,
-  },
-] as const;
-
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -49,8 +25,8 @@ export class UsersService {
         settings: {
           create: {
             defaultInterval: 1,
-        reminderHour: 12,
-        reminderMinute: 0,
+            reminderHour: 12,
+            reminderMinute: 0,
             timezone: 'Europe/Moscow',
           },
         },
@@ -65,26 +41,6 @@ export class UsersService {
     });
 
     return user;
-  }
-
-  async ensureDefaultMedications(userId: bigint) {
-    const count = await this.prisma.medication.count({ where: { userId } });
-    if (count > 0) {
-      return;
-    }
-
-    const now = new Date();
-    await this.prisma.medication.createMany({
-      data: DEFAULT_MEDS.map((med) => ({
-        userId,
-        name: med.name,
-        tabletsCount: med.tabletsCount,
-        mgPerTablet: med.mgPerTablet,
-        intervalDays: med.intervalDays,
-        sortOrder: med.sortOrder,
-        nextDueAt: now,
-      })),
-    });
   }
 
   async findById(id: number | bigint) {
