@@ -159,7 +159,15 @@ export class GamesService {
       });
 
       await this.setActiveProfile(userId, profile.id);
-      await this.syncProfile(userId, profile.id, true);
+      try {
+        await this.syncProfile(userId, profile.id, true);
+      } catch {
+        try {
+          await this.syncProfile(userId, profile.id, false);
+        } catch {
+          //
+        }
+      }
       return this.overview(userId);
     } catch (err) {
       this.rethrowDbError(err);

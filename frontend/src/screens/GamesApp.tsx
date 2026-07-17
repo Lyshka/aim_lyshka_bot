@@ -79,6 +79,16 @@ export function GamesApp({ onBack }: GamesAppProps) {
         `Синхронизировано: есть ${overview.stats.owned}, нет ${overview.stats.missing}`,
       );
     } catch (err) {
+      try {
+        const overview = await api.gamesOverview(initData);
+        setData(overview);
+        setAdding(overview.profiles.length === 0);
+        if (overview.profiles.length > 0) {
+          setSteamInput('');
+        }
+      } catch {
+        //
+      }
       setStatus(err instanceof Error ? err.message : 'Ошибка привязки');
     } finally {
       setBusy(false);
