@@ -17,7 +17,6 @@ function serializePost(post: {
   imageUrl: string;
   text: string;
   createdAt: Date;
-  sentAt: Date | null;
 }) {
   return {
     id: post.id,
@@ -25,7 +24,6 @@ function serializePost(post: {
     imageUrl: post.imageUrl,
     text: post.text,
     createdAt: post.createdAt.toISOString(),
-    sentAt: post.sentAt?.toISOString() ?? null,
   };
 }
 
@@ -55,16 +53,23 @@ export class CatsService {
     private readonly botService: BotService,
   ) {}
 
-  async ensureTodayPost(timeZone = 'Europe/Moscow') {
+  async ensureTodayPost(userId: number, timeZone = 'Europe/Moscow') {
+    const uid = BigInt(userId);
     const deliveryDate = formatYmd(new Date(), timeZone);
     const existing = await this.prisma.catPost.findUnique({
-      where: { deliveryDate },
+      where: {
+        userId_deliveryDate: {
+          userId: uid,
+          deliveryDate,
+        },
+      },
     });
     if (existing) {
       return existing;
     }
 
     const usedImages = await this.prisma.catPost.findMany({
+      where: { userId: uid },
       select: { imageKey: true, textKey: true },
     });
     const imageKeys = new Set(usedImages.map((i) => i.imageKey));
@@ -76,6 +81,7 @@ export class CatsService {
     try {
       return await this.prisma.catPost.create({
         data: {
+          userId: uid,
           deliveryDate,
           imageUrl: image.url,
           imageKey: image.id,
@@ -85,7 +91,12 @@ export class CatsService {
       });
     } catch {
       const again = await this.prisma.catPost.findUnique({
-        where: { deliveryDate },
+        where: {
+          userId_deliveryDate: {
+            userId: uid,
+            deliveryDate,
+          },
+        },
       });
       if (again) {
         return again;
@@ -108,9 +119,14 @@ export class CatsService {
   async feed(userId: number, from?: string, to?: string) {
     const settings = await this.getUserSettings(userId);
     const isAdmin = this.appsService.isAdmin(userId);
-    const today = await this.ensureTodayPost(settings.timezone || 'Europe/Moscow');
+    const timeZone = settings.timezone || 'Europe/Moscow';
+    const uid = BigInt(userId);
+    const today = await this.ensureTodayPost(userId, timeZone);
 
-    const where: { deliveryDate?: { gte?: string; lte?: string } } = {};
+    const where: {
+      userId: bigint;
+      deliveryDate?: { gte?: string; lte?: string };
+    } = { userId: uid };
     if (from && to) {
       where.deliveryDate = { gte: from, lte: to };
     } else if (from) {
@@ -183,20 +199,6 @@ export class CatsService {
           continue;
         }
 
-        const post = await this.ensureTodayPost(timeZone);
-
-        if (
-          post.sentAt &&
-          settings.catsLastDeliveryDate == null &&
-          post.deliveryDate === deliveryDate
-        ) {
-          await this.prisma.userSettings.update({
-            where: { userId: BigInt(userId) },
-            data: { catsLastDeliveryDate: deliveryDate },
-          });
-          continue;
-        }
-
         const local = localNowParts(timeZone);
         if (
           local.hour < settings.catsReminderHour ||
@@ -205,6 +207,8 @@ export class CatsService {
         ) {
           continue;
         }
+
+        const post = await this.ensureTodayPost(userId, timeZone);
 
         await this.botService.sendPhoto(
           userId,

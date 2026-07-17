@@ -122,7 +122,6 @@ export type CatPost = {
   imageUrl: string;
   text: string;
   createdAt: string;
-  sentAt: string | null;
 };
 
 export type CatsSettings = {

@@ -21,6 +21,7 @@ model User {
   settings     UserSettings?
   appGrants    UserAppGrant[]
   healthDays   HealthDay[]
+  catPosts     CatPost[]
 }
 
 model App {
@@ -108,16 +109,20 @@ model MedicationIntake {
 }
 
 model CatPost {
-  id           String    @id @default(cuid())
-  deliveryDate String    @unique
+  id           String   @id @default(cuid())
+  userId       BigInt
+  deliveryDate String
   imageUrl     String
-  imageKey     String    @unique
+  imageKey     String
   text         String
-  textKey      String    @unique
-  sentAt       DateTime?
-  createdAt    DateTime  @default(now())
+  textKey      String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([createdAt])
+  @@unique([userId, deliveryDate])
+  @@unique([userId, imageKey])
+  @@unique([userId, textKey])
+  @@index([userId, createdAt])
 }
 
 model HealthDay {
