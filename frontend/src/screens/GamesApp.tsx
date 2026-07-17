@@ -456,9 +456,17 @@ export function GamesApp({ onBack }: GamesAppProps) {
                     Инвентарь CS2 пуст или ещё не загрузился
                   </p>
                 ) : (
-                  inventory?.items.map((item) => (
-                    <InventoryCard key={item.id} item={item} />
-                  ))
+                  <div
+                    className="grid gap-2"
+                    style={{
+                      gridTemplateColumns:
+                        'repeat(auto-fill, minmax(108px, 1fr))',
+                    }}
+                  >
+                    {inventory?.items.map((item) => (
+                      <InventoryCard key={item.id} item={item} />
+                    ))}
+                  </div>
                 )}
               </>
             )}
@@ -731,7 +739,7 @@ function InventoryIcon({ src }: { src: string }) {
   const [broken, setBroken] = useState(!src);
   return (
     <div
-      className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+      className="mx-auto flex aspect-square w-full max-w-[88px] items-center justify-center overflow-hidden rounded-2xl"
       style={{
         background: 'linear-gradient(145deg, #1b2838, #2a475e)',
       }}
@@ -740,7 +748,7 @@ function InventoryIcon({ src }: { src: string }) {
         <img
           src={src}
           alt=""
-          className="h-full w-full object-contain p-1"
+          className="h-full w-full object-contain p-1.5"
           onError={() => setBroken(true)}
         />
       ) : (
@@ -753,25 +761,37 @@ function InventoryIcon({ src }: { src: string }) {
 }
 
 function InventoryCard({ item }: { item: InventoryItem }) {
+  const price = item.totalUsd ?? item.priceUsd;
   return (
     <article
-      className="flex gap-3 overflow-hidden rounded-[24px] p-2 pr-3"
+      className="flex flex-col gap-2 overflow-hidden rounded-[20px] p-2"
       style={{
         background: 'color-mix(in srgb, white 75%, #1b2838)',
       }}
     >
-      <InventoryIcon src={item.iconUrl} />
-      <div className="min-w-0 flex-1 py-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">{item.name}</p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-            {item.amount > 1 ? `×${item.amount}` : item.marketable ? 'Рынок' : 'Не продаётся'}
-          </p>
-          <p className="shrink-0 text-sm font-semibold">
-            {formatUsd(item.totalUsd ?? item.priceUsd)}
-          </p>
-        </div>
+      <div className="relative">
+        <InventoryIcon src={item.iconUrl} />
+        {item.amount > 1 ? (
+          <span
+            className="absolute top-1 right-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+            style={{
+              background: 'color-mix(in srgb, #1b2838 82%, transparent)',
+              color: '#c7d5e0',
+            }}
+          >
+            ×{item.amount}
+          </span>
+        ) : null}
       </div>
+      <p className="line-clamp-2 min-h-[2.5rem] text-center text-[11px] font-semibold leading-snug">
+        {item.name}
+      </p>
+      <p
+        className="text-center text-xs font-semibold"
+        style={{ color: price != null ? 'var(--tg-text)' : 'var(--tg-hint)' }}
+      >
+        {formatUsd(price)}
+      </p>
     </article>
   );
 }

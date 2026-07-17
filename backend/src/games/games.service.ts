@@ -610,7 +610,24 @@ export class GamesService {
       });
       const items = await this.prisma.steamInventoryItem.findMany({
         where: { steamProfileId: active.id },
-        orderBy: [{ priceUsd: 'desc' }, { name: 'asc' }],
+      });
+
+      items.sort((a, b) => {
+        const aPrice = a.priceUsd;
+        const bPrice = b.priceUsd;
+        const aHas = aPrice != null;
+        const bHas = bPrice != null;
+        if (aHas !== bHas) {
+          return aHas ? -1 : 1;
+        }
+        if (aHas && bHas) {
+          const aTotal = aPrice * a.amount;
+          const bTotal = bPrice * b.amount;
+          if (bTotal !== aTotal) {
+            return bTotal - aTotal;
+          }
+        }
+        return a.name.localeCompare(b.name, 'ru');
       });
 
       let totalValueUsd = 0;
