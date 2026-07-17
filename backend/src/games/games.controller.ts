@@ -46,6 +46,15 @@ export class GamesController {
     return this.gamesService.deleteProfile(session.user.id, dto.profileId);
   }
 
+  @Post('sync')
+  async sync(@Body() dto: GamesInitDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'games',
+    );
+    return this.gamesService.syncAll(session.user.id, session.isAdmin);
+  }
+
   @Post('inventory')
   async inventory(@Body() dto: GamesInitDto) {
     const session = await this.authService.authenticateApp(

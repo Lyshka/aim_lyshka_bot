@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -269,6 +270,31 @@ export class GamesService {
           //
         }
       }
+      return this.overview(userId);
+    } catch (err) {
+      this.rethrowDbError(err);
+    }
+  }
+
+  async syncAll(userId: number, isAdmin: boolean) {
+    if (!isAdmin) {
+      throw new ForbiddenException('Синхронизация доступна только админу');
+    }
+
+    try {
+      const profiles = await this.prisma.steamProfile.findMany({
+        where: { userId: BigInt(userId) },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      for (const profile of profiles) {
+        try {
+          await this.syncProfile(userId, profile.id, false);
+        } catch {
+          //
+        }
+      }
+
       return this.overview(userId);
     } catch (err) {
       this.rethrowDbError(err);

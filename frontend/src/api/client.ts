@@ -311,6 +311,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, profileId }),
     }),
+  gamesSync: (initData: string) =>
+    request<GamesOverview>('/api/games/sync', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
   gamesInventory: (initData: string) =>
     request<InventoryOverview>('/api/games/inventory', {
       method: 'POST',

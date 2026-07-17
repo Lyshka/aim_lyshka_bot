@@ -14,13 +14,13 @@ type GamesAppProps = {
   onBack: () => void;
 };
 
-type Tab = 'home' | 'owned' | 'missing' | 'inventory';
+type Tab = 'accounts' | 'games' | 'skins';
+type GamesSubTab = 'owned' | 'missing';
 
 const gamesTabs = [
-  { id: 'home' as const, label: 'Обзор' },
-  { id: 'owned' as const, label: 'Есть' },
-  { id: 'missing' as const, label: 'Нет' },
-  { id: 'inventory' as const, label: 'Скины' },
+  { id: 'accounts' as const, label: 'Аккаунты' },
+  { id: 'games' as const, label: 'Игры' },
+  { id: 'skins' as const, label: 'Скины' },
 ];
 
 function formatSync(value: string | null | undefined) {
@@ -46,12 +46,13 @@ function formatUsd(value: number | null | undefined) {
 }
 
 export function GamesApp({ onBack }: GamesAppProps) {
-  const { initData, haptic } = useTelegram();
+  const { initData, haptic, isAdmin } = useTelegram();
   const [data, setData] = useState<GamesOverview | null>(null);
   const [inventory, setInventory] = useState<InventoryOverview | null>(null);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('home');
+  const [tab, setTab] = useState<Tab>('accounts');
+  const [gamesSubTab, setGamesSubTab] = useState<GamesSubTab>('owned');
   const [steamInput, setSteamInput] = useState('');
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -91,7 +92,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
   }, [load]);
 
   useEffect(() => {
-    if (tab !== 'inventory') {
+    if (tab !== 'skins') {
       return;
     }
     void loadInventory();
@@ -139,7 +140,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
       const overview = await api.gamesSelect(initData, profileId);
       setData(overview);
       setInventory(null);
-      if (tab === 'inventory') {
+      if (tab === 'skins') {
         void loadInventory();
       }
     } catch (err) {
@@ -161,6 +162,27 @@ export function GamesApp({ onBack }: GamesAppProps) {
       setStatus('Аккаунт удалён');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Ошибка удаления');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncAll() {
+    setBusy(true);
+    setStatus('Синхронизируем аккаунты, игры и скины…');
+    haptic('medium');
+    try {
+      const overview = await api.gamesSync(initData);
+      setData(overview);
+      setInventory(null);
+      if (tab === 'skins') {
+        await loadInventory();
+      }
+      setStatus(
+        `Готово: игр ${overview.stats.owned}/${overview.stats.total}, скинов ${overview.stats.inventoryCount}`,
+      );
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Ошибка синхронизации');
     } finally {
       setBusy(false);
     }
@@ -190,8 +212,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
     );
   }
 
-  const list =
-    tab === 'owned' ? data.owned : tab === 'missing' ? data.missing : [];
+  const list = gamesSubTab === 'owned' ? data.owned : data.missing;
   const hasAccounts = data.profiles.length > 0;
 
   return (
@@ -216,24 +237,25 @@ export function GamesApp({ onBack }: GamesAppProps) {
             Игры
           </h1>
           <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Steam wishlist и библиотека — что есть и чего нет
+            Steam аккаунты, библиотека и скины CS2
           </p>
         </div>
       </div>
 
       <Shell tab={tab} onTabChange={setTab} tabs={gamesTabs}>
-        {tab === 'home' ? (
+        {tab === 'accounts' ? (
           <div className="space-y-4">
             {!data.steamConfigured ? (
               <section
                 className="rounded-3xl px-5 py-4 text-sm"
                 style={{
-                  background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
+                  background:
+                    'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
                   color: '#9f1239',
                 }}
               >
-                На сервере не задан STEAM_API_KEY. Админ должен добавить ключ в .env
-                и перезапустить backend.
+                На сервере не задан STEAM_API_KEY. Админ должен добавить ключ в
+                .env и перезапустить backend.
               </section>
             ) : null}
 
@@ -241,8 +263,16 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <>
                 <div className="grid grid-cols-3 gap-2">
                   <StatCard label="Всего" value={data.stats.total} />
-                  <StatCard label="Есть" value={data.stats.owned} accent="#16a34a" />
-                  <StatCard label="Нет" value={data.stats.missing} accent="#dc2626" />
+                  <StatCard
+                    label="Есть"
+                    value={data.stats.owned}
+                    accent="#16a34a"
+                  />
+                  <StatCard
+                    label="Нет"
+                    value={data.stats.missing}
+                    accent="#dc2626"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <StatCard
@@ -256,9 +286,21 @@ export function GamesApp({ onBack }: GamesAppProps) {
                     accent="#1b2838"
                   />
                 </div>
-                <p className="px-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-                  Сумма по всем аккаунтам · CS2
-                </p>
+
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void syncAll()}
+                    className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(145deg, #1b2838, #2a475e)',
+                      color: '#c7d5e0',
+                    }}
+                  >
+                    Синхронизировать всё
+                  </button>
+                ) : null}
 
                 <section className="space-y-2">
                   <p className="px-1 text-sm font-medium">Аккаунты Steam</p>
@@ -283,7 +325,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
                     }}
                     className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
                     style={{
-                      background: 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
+                      background:
+                        'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
                     }}
                   >
                     Добавить аккаунт
@@ -303,8 +346,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   {hasAccounts ? 'Новый Steam аккаунт' : 'Привязка Steam'}
                 </p>
                 <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                  Вставь ссылку на профиль, Steam ID или ник. После добавления ссылку
-                  изменить нельзя — только удалить аккаунт.
+                  Вставь ссылку на профиль, Steam ID или ник. После добавления
+                  ссылку изменить нельзя — только удалить аккаунт.
                 </p>
                 <input
                   value={steamInput}
@@ -336,7 +379,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
                       }}
                       className="rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
                       style={{
-                        background: 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
+                        background:
+                          'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
                       }}
                     >
                       Отмена
@@ -347,15 +391,17 @@ export function GamesApp({ onBack }: GamesAppProps) {
             ) : null}
 
             {data.profile ? (
-              <p className="text-center text-xs" style={{ color: 'var(--tg-hint)' }}>
-                Данные обновляются автоматически раз в день ·{' '}
-                {formatSync(data.profile.lastSyncAt)}
+              <p
+                className="text-center text-xs"
+                style={{ color: 'var(--tg-hint)' }}
+              >
+                Автообновление раз в день · {formatSync(data.profile.lastSyncAt)}
               </p>
             ) : null}
           </div>
         ) : null}
 
-        {tab === 'owned' || tab === 'missing' ? (
+        {tab === 'games' ? (
           <div className="space-y-3">
             {data.profile ? (
               <div
@@ -370,34 +416,63 @@ export function GamesApp({ onBack }: GamesAppProps) {
                     {data.profile.personaName}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-                    {tab === 'owned' ? 'Библиотека' : 'Wishlist'}
+                    {data.owned.length} в библиотеке · {data.missing.length} в
+                    вишлисте
                   </p>
                 </div>
                 <ProfileLinkButton href={data.profile.profileUrl} />
               </div>
             ) : null}
 
-            {list.length === 0 ? (
+            <div
+              className="grid grid-cols-2 gap-1 rounded-2xl p-1"
+              style={{
+                background: 'color-mix(in srgb, #1b2838 12%, transparent)',
+              }}
+            >
+              <SubTabButton
+                active={gamesSubTab === 'owned'}
+                label={`Библиотека · ${data.owned.length}`}
+                accent="#16a34a"
+                onClick={() => {
+                  haptic('light');
+                  setGamesSubTab('owned');
+                }}
+              />
+              <SubTabButton
+                active={gamesSubTab === 'missing'}
+                label={`Вишлист · ${data.missing.length}`}
+                accent="#dc2626"
+                onClick={() => {
+                  haptic('light');
+                  setGamesSubTab('missing');
+                }}
+              />
+            </div>
+
+            {!data.profile ? (
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                {data.profile
-                  ? tab === 'owned'
-                    ? 'В библиотеке пока пусто или список игр скрыт в Steam'
-                    : 'Wishlist пуст'
-                  : 'Сначала добавь Steam аккаунт на вкладке «Обзор»'}
+                Сначала добавь Steam аккаунт на вкладке «Аккаунты»
+              </p>
+            ) : list.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+                {gamesSubTab === 'owned'
+                  ? 'В библиотеке пока пусто или список игр скрыт в Steam'
+                  : 'Вишлист пуст'}
               </p>
             ) : (
               list.map((game) => (
                 <GameCard
                   key={game.id}
                   game={game}
-                  variant={tab === 'owned' ? 'owned' : 'missing'}
+                  variant={gamesSubTab === 'owned' ? 'owned' : 'missing'}
                 />
               ))
             )}
           </div>
         ) : null}
 
-        {tab === 'inventory' ? (
+        {tab === 'skins' ? (
           <div className="space-y-3">
             {data.profile ? (
               <div
@@ -421,7 +496,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
 
             {!data.profile ? (
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                Сначала добавь Steam аккаунт на вкладке «Обзор»
+                Сначала добавь Steam аккаунт на вкладке «Аккаунты»
               </p>
             ) : inventoryLoading && !inventory ? (
               <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
@@ -431,12 +506,13 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <section
                 className="rounded-3xl px-5 py-4 text-sm"
                 style={{
-                  background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
+                  background:
+                    'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
                   color: '#9f1239',
                 }}
               >
-                Инвентарь скрыт в настройках Steam. Сделай профиль и инвентарь CS2
-                публичными, затем открой вкладку снова.
+                Инвентарь скрыт в настройках Steam. Сделай профиль и инвентарь
+                CS2 публичными, затем открой вкладку снова.
               </section>
             ) : (
               <InventoryPanel items={inventory?.items ?? []} />
@@ -448,7 +524,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
           <p
             className="rounded-2xl px-4 py-3 text-sm"
             style={{
-              background: 'color-mix(in srgb, var(--tg-button) 14%, transparent)',
+              background:
+                'color-mix(in srgb, var(--tg-button) 14%, transparent)',
             }}
           >
             {status}
@@ -456,6 +533,35 @@ export function GamesApp({ onBack }: GamesAppProps) {
         ) : null}
       </Shell>
     </div>
+  );
+}
+
+function SubTabButton({
+  active,
+  label,
+  accent,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  accent: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl px-3 py-2.5 text-xs font-semibold transition"
+      style={{
+        background: active
+          ? `color-mix(in srgb, ${accent} 18%, white)`
+          : 'transparent',
+        color: active ? accent : 'var(--tg-hint)',
+        boxShadow: active ? `inset 0 0 0 1px ${accent}` : 'none',
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -492,7 +598,12 @@ function ProfileLinkButton({ href }: { href: string }) {
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="currentColor"
+        aria-hidden
+      >
         <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z" />
       </svg>
     </a>
@@ -529,7 +640,9 @@ function AccountCard({
         >
           <AccountAvatar profile={profile} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{profile.personaName}</p>
+            <p className="truncate text-sm font-semibold">
+              {profile.personaName}
+            </p>
             <p className="truncate text-xs" style={{ color: 'var(--tg-hint)' }}>
               {profile.active ? 'Выбран' : 'Нажми, чтобы выбрать'} ·{' '}
               {formatSync(profile.lastSyncAt)}
@@ -560,7 +673,9 @@ function AccountCard({
             <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
               CS2 · {profile.stats.inventoryCount} шт.
             </p>
-            <p className="text-sm font-semibold">{formatUsd(profile.stats.inventoryValueUsd)}</p>
+            <p className="text-sm font-semibold">
+              {formatUsd(profile.stats.inventoryValueUsd)}
+            </p>
           </div>
         )}
       </div>
@@ -597,7 +712,10 @@ function MiniStat({
         background: 'color-mix(in srgb, white 55%, transparent)',
       }}
     >
-      <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--tg-hint)' }}>
+      <p
+        className="text-[10px] font-semibold uppercase"
+        style={{ color: 'var(--tg-hint)' }}
+      >
         {label}
       </p>
       <p
@@ -694,12 +812,14 @@ function GameCard({
     >
       <SteamCover src={game.imageUrl || undefined} />
       <div className="min-w-0 py-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">{game.name}</p>
+        <p className="line-clamp-2 text-sm font-semibold leading-snug">
+          {game.name}
+        </p>
         <p
           className="mt-1 text-xs font-medium"
           style={{ color: variant === 'owned' ? '#16a34a' : '#dc2626' }}
         >
-          {variant === 'owned' ? 'В библиотеке' : 'Ещё нет'}
+          {variant === 'owned' ? 'В библиотеке' : 'В вишлисте'}
         </p>
       </div>
     </a>
@@ -707,7 +827,10 @@ function GameCard({
 }
 
 function itemTotal(item: InventoryItem) {
-  return item.totalUsd ?? (item.priceUsd != null ? item.priceUsd * item.amount : null);
+  return (
+    item.totalUsd ??
+    (item.priceUsd != null ? item.priceUsd * item.amount : null)
+  );
 }
 
 function uniqueSorted(values: string[]) {
@@ -716,9 +839,63 @@ function uniqueSorted(values: string[]) {
   );
 }
 
+function rarityAccent(rarity: string) {
+  const value = rarity.toLowerCase();
+  if (value.includes('контрабанд') || value.includes('contraband')) {
+    return '#e4ae39';
+  }
+  if (
+    value.includes('тайное') ||
+    value.includes('extraordin') ||
+    value.includes('covert') ||
+    value.includes('нож')
+  ) {
+    return '#eb4b4b';
+  }
+  if (value.includes('засекрет') || value.includes('classified')) {
+    return '#d32ce6';
+  }
+  if (value.includes('запрещ') || value.includes('restricted')) {
+    return '#8847ff';
+  }
+  if (value.includes('армейск') || value.includes('mil-spec')) {
+    return '#4b69ff';
+  }
+  if (value.includes('промышл') || value.includes('industrial')) {
+    return '#5e98d9';
+  }
+  return '#66c0f4';
+}
+
 type InvSort = 'price_desc' | 'price_asc' | 'name';
 type InvGroup = 'none' | 'type' | 'rarity' | 'exterior';
 type InvPriceFilter = 'all' | 'priced' | 'unpriced';
+
+function Chip({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold"
+      style={{
+        background: active
+          ? 'linear-gradient(145deg, #1b2838, #2a475e)'
+          : 'color-mix(in srgb, #66c0f4 16%, transparent)',
+        color: active ? '#c7d5e0' : 'var(--tg-text)',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function InventoryPanel({ items }: { items: InventoryItem[] }) {
   const [query, setQuery] = useState('');
@@ -860,11 +1037,6 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
     );
   }
 
-  const selectStyle = {
-    background: 'var(--tg-bg)',
-    color: 'var(--tg-text)',
-  } as const;
-
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
@@ -876,92 +1048,129 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
         />
       </div>
 
-      <div
-        className="space-y-2 rounded-3xl px-3 py-3"
-        style={{
-          background: 'color-mix(in srgb, white 70%, #1b2838)',
-        }}
-      >
+      <div className="relative">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск по названию"
-          className="w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
-          style={selectStyle}
+          placeholder="Найти скин…"
+          className="w-full rounded-2xl border-0 px-4 py-3 text-sm outline-none"
+          style={{
+            background: 'color-mix(in srgb, #66c0f4 14%, white)',
+            color: 'var(--tg-text)',
+            boxShadow: 'inset 0 0 0 1px color-mix(in srgb, #66c0f4 35%, transparent)',
+          }}
         />
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="all">Тип: все</option>
-            {types.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-          <select
-            value={rarityFilter}
-            onChange={(e) => setRarityFilter(e.target.value)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="all">Редкость: все</option>
-            {rarities.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-          <select
-            value={exteriorFilter}
-            onChange={(e) => setExteriorFilter(e.target.value)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="all">Износ: все</option>
-            {exteriors.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-          <select
-            value={priceFilter}
-            onChange={(e) => setPriceFilter(e.target.value as InvPriceFilter)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="all">Цена: все</option>
-            <option value="priced">С ценой</option>
-            <option value="unpriced">Без цены</option>
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as InvSort)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="price_desc">Сорт: дороже</option>
-            <option value="price_asc">Сорт: дешевле</option>
-            <option value="name">Сорт: имя</option>
-          </select>
-          <select
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value as InvGroup)}
-            className="rounded-xl border-0 px-2 py-2 text-xs outline-none"
-            style={selectStyle}
-          >
-            <option value="type">Группы: тип</option>
-            <option value="rarity">Группы: редкость</option>
-            <option value="exterior">Группы: износ</option>
-            <option value="none">Без групп</option>
-          </select>
-        </div>
       </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Chip
+          active={priceFilter === 'all'}
+          label="Все"
+          onClick={() => setPriceFilter('all')}
+        />
+        <Chip
+          active={priceFilter === 'priced'}
+          label="С ценой"
+          onClick={() => setPriceFilter('priced')}
+        />
+        <Chip
+          active={priceFilter === 'unpriced'}
+          label="Без цены"
+          onClick={() => setPriceFilter('unpriced')}
+        />
+        <Chip
+          active={sort === 'price_desc'}
+          label="Дороже"
+          onClick={() => setSort('price_desc')}
+        />
+        <Chip
+          active={sort === 'price_asc'}
+          label="Дешевле"
+          onClick={() => setSort('price_asc')}
+        />
+        <Chip
+          active={sort === 'name'}
+          label="А–Я"
+          onClick={() => setSort('name')}
+        />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Chip
+          active={groupBy === 'type'}
+          label="По типу"
+          onClick={() => setGroupBy('type')}
+        />
+        <Chip
+          active={groupBy === 'rarity'}
+          label="По редкости"
+          onClick={() => setGroupBy('rarity')}
+        />
+        <Chip
+          active={groupBy === 'exterior'}
+          label="По износу"
+          onClick={() => setGroupBy('exterior')}
+        />
+        <Chip
+          active={groupBy === 'none'}
+          label="Без групп"
+          onClick={() => setGroupBy('none')}
+        />
+      </div>
+
+      {types.length > 1 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <Chip
+            active={typeFilter === 'all'}
+            label="Тип: все"
+            onClick={() => setTypeFilter('all')}
+          />
+          {types.map((value) => (
+            <Chip
+              key={value}
+              active={typeFilter === value}
+              label={value}
+              onClick={() => setTypeFilter(value)}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {rarities.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <Chip
+            active={rarityFilter === 'all'}
+            label="Редкость: все"
+            onClick={() => setRarityFilter('all')}
+          />
+          {rarities.map((value) => (
+            <Chip
+              key={value}
+              active={rarityFilter === value}
+              label={value}
+              onClick={() => setRarityFilter(value)}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {exteriors.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <Chip
+            active={exteriorFilter === 'all'}
+            label="Износ: все"
+            onClick={() => setExteriorFilter('all')}
+          />
+          {exteriors.map((value) => (
+            <Chip
+              key={value}
+              active={exteriorFilter === value}
+              label={value}
+              onClick={() => setExteriorFilter(value)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {filtered.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
@@ -971,7 +1180,7 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
         groups.map((group) => (
           <section key={group.key} className="space-y-2">
             {group.title ? (
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between px-1 pt-1">
                 <p className="text-sm font-semibold">{group.title}</p>
                 <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
                   {group.items.reduce((sum, item) => sum + item.amount, 0)} шт.
@@ -979,9 +1188,9 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
               </div>
             ) : null}
             <div
-              className="grid gap-2"
+              className="grid gap-2.5"
               style={{
-                gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))',
               }}
             >
               {group.items.map((item) => (
@@ -995,68 +1204,69 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
   );
 }
 
-function InventoryIcon({ src }: { src: string }) {
-  const [broken, setBroken] = useState(!src);
-  return (
-    <div
-      className="mx-auto flex aspect-square w-full max-w-[88px] items-center justify-center overflow-hidden rounded-2xl"
-      style={{
-        background: 'linear-gradient(145deg, #1b2838, #2a475e)',
-      }}
-    >
-      {!broken && src ? (
-        <img
-          src={src}
-          alt=""
-          className="h-full w-full object-contain p-1.5"
-          onError={() => setBroken(true)}
-        />
-      ) : (
-        <span className="text-xs font-bold" style={{ color: '#66c0f4' }}>
-          CS
-        </span>
-      )}
-    </div>
-  );
-}
-
 function InventoryCard({ item }: { item: InventoryItem }) {
+  const [broken, setBroken] = useState(!item.iconUrl);
   const price = item.totalUsd ?? item.priceUsd;
+  const accent = rarityAccent(item.rarity);
+
   return (
     <article
-      className="flex flex-col gap-2 overflow-hidden rounded-[20px] p-2"
+      className="relative overflow-hidden rounded-[22px]"
       style={{
-        background: 'color-mix(in srgb, white 75%, #1b2838)',
+        background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 28%, #1b2838), #0e1620 70%)`,
+        boxShadow: `0 8px 20px color-mix(in srgb, ${accent} 18%, transparent)`,
       }}
     >
-      <div className="relative">
-        <InventoryIcon src={item.iconUrl} />
+      <div
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ background: accent }}
+      />
+      <div className="relative px-2 pt-3 pb-2">
+        <div className="mx-auto flex aspect-square w-full max-w-[96px] items-center justify-center">
+          {!broken && item.iconUrl ? (
+            <img
+              src={item.iconUrl}
+              alt=""
+              className="h-full w-full object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)]"
+              onError={() => setBroken(true)}
+            />
+          ) : (
+            <span className="text-xs font-bold" style={{ color: accent }}>
+              CS
+            </span>
+          )}
+        </div>
         {item.amount > 1 ? (
           <span
-            className="absolute top-1 right-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
-            style={{
-              background: 'color-mix(in srgb, #1b2838 82%, transparent)',
-              color: '#c7d5e0',
-            }}
+            className="absolute top-2 right-2 rounded-md px-1.5 py-0.5 text-[10px] font-bold"
+            style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}
           >
             ×{item.amount}
           </span>
         ) : null}
       </div>
-      <p className="line-clamp-2 min-h-[2.5rem] text-center text-[11px] font-semibold leading-snug">
-        {item.name}
-      </p>
-      {item.exterior ? (
-        <p className="text-center text-[10px]" style={{ color: 'var(--tg-hint)' }}>
-          {item.exterior}
+      <div className="space-y-1 px-2.5 pb-3">
+        <p
+          className="line-clamp-2 min-h-[2.4rem] text-center text-[11px] font-semibold leading-snug"
+          style={{ color: '#e8f1f8' }}
+        >
+          {item.name}
         </p>
-      ) : null}
-      <p
-        className="text-center text-xs font-semibold"
-        style={{ color: price != null ? 'var(--tg-text)' : 'var(--tg-hint)' }}
-      >
-        {formatUsd(price)}
-      </p>
+        {item.exterior ? (
+          <p className="text-center text-[10px]" style={{ color: '#9fb3c4' }}>
+            {item.exterior}
+          </p>
+        ) : null}
+        <p
+          className="rounded-xl py-1 text-center text-xs font-bold"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            color: price != null ? '#fff' : '#8aa0b3',
+          }}
+        >
+          {formatUsd(price)}
+        </p>
+      </div>
     </article>
   );
 }
