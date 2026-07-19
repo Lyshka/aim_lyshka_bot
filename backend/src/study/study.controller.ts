@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
 import {
-  StudyCreateLinkDto,
+  StudyCreateLinksDto,
   StudyCreateSectionDto,
   StudyDeleteLinkDto,
   StudyDeleteSectionDto,
@@ -59,16 +59,14 @@ export class StudyController {
   }
 
   @Post('links/create')
-  async createLink(@Body() dto: StudyCreateLinkDto) {
+  async createLinks(@Body() dto: StudyCreateLinksDto) {
     const session = await this.authService.authenticateApp(
       dto.initData ?? '',
       'study',
     );
-    return this.studyService.createLink(session.user.id, {
+    return this.studyService.createLinks(session.user.id, {
       sectionId: dto.sectionId,
-      title: dto.title,
-      url: dto.url,
-      note: dto.note,
+      links: dto.links,
     });
   }
 

@@ -131,9 +131,12 @@ export class StudyService {
     return this.overview(userId);
   }
 
-  async createLink(
+  async createLinks(
     userId: number,
-    data: { sectionId: string; title: string; url: string; note?: string },
+    data: {
+      sectionId: string;
+      links: { title: string; url: string; note?: string }[];
+    },
   ) {
     const section = await this.prisma.studySection.findFirst({
       where: { id: data.sectionId, userId },
@@ -142,16 +145,27 @@ export class StudyService {
       throw new NotFoundException('Раздел не найден');
     }
 
-    const title = data.title.trim();
-    const url = normalizeUrl(data.url);
-    if (!title || !url) {
-      throw new BadRequestException('Нужны название и ссылка');
+    if (!data.links.length) {
+      throw new BadRequestException('Добавь хотя бы одну ссылку');
     }
 
-    try {
-      new URL(url);
-    } catch {
-      throw new BadRequestException('Некорректная ссылка');
+    const prepared: { title: string; url: string; note: string }[] = [];
+    for (const item of data.links) {
+      const title = item.title.trim();
+      const url = normalizeUrl(item.url);
+      if (!title || !url) {
+        throw new BadRequestException('Нужны название и ссылка');
+      }
+      try {
+        new URL(url);
+      } catch {
+        throw new BadRequestException(`Некорректная ссылка: ${item.url}`);
+      }
+      prepared.push({
+        title,
+        url,
+        note: (item.note ?? '').trim(),
+      });
     }
 
     const last = await this.prisma.studyLink.findFirst({
@@ -160,15 +174,19 @@ export class StudyService {
       select: { sortOrder: true },
     });
 
-    await this.prisma.studyLink.create({
-      data: {
-        userId,
-        sectionId: section.id,
-        title,
-        url,
-        note: (data.note ?? '').trim(),
-        sortOrder: (last?.sortOrder ?? -1) + 1,
-      },
+    let sortOrder = last?.sortOrder ?? -1;
+    await this.prisma.studyLink.createMany({
+      data: prepared.map((item) => {
+        sortOrder += 1;
+        return {
+          userId,
+          sectionId: section.id,
+          title: item.title,
+          url: item.url,
+          note: item.note,
+          sortOrder,
+        };
+      }),
     });
 
     return this.overview(userId);

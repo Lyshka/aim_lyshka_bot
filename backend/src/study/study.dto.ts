@@ -1,8 +1,13 @@
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 
 export class StudyInitDto {
@@ -35,11 +40,7 @@ export class StudyDeleteSectionDto extends StudyInitDto {
   sectionId!: string;
 }
 
-export class StudyCreateLinkDto extends StudyInitDto {
-  @IsString()
-  @MinLength(1)
-  sectionId!: string;
-
+export class StudyLinkItemDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
@@ -54,6 +55,19 @@ export class StudyCreateLinkDto extends StudyInitDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+}
+
+export class StudyCreateLinksDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  sectionId!: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => StudyLinkItemDto)
+  links!: StudyLinkItemDto[];
 }
 
 export class StudyUpdateLinkDto extends StudyInitDto {

@@ -538,13 +538,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, sectionId }),
     }),
-  studyCreateLink: (
+  studyCreateLinks: (
     initData: string,
     data: {
       sectionId: string;
-      title: string;
-      url: string;
-      note?: string;
+      links: { title: string; url: string; note?: string }[];
     },
   ) =>
     request<StudyOverview>('/api/study/links/create', {
