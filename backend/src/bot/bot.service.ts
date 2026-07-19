@@ -27,26 +27,35 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  getWebAppUrl(): string | null {
+  getWebAppUrl(appSlug?: string): string | null {
     const fromFile = this.readUrlFromFile();
     if (fromFile) {
       this.cachedUrl = fromFile.replace(/\/$/, '');
-      return this.withCacheBust(this.cachedUrl);
+      return this.withParams(this.cachedUrl, appSlug);
     }
 
     const fromEnv = this.configService.get<string>('WEBAPP_URL')?.trim();
     if (!fromEnv) {
-      return this.cachedUrl ? this.withCacheBust(this.cachedUrl) : null;
+      return this.cachedUrl ? this.withParams(this.cachedUrl, appSlug) : null;
     }
     this.cachedUrl = fromEnv.replace(/\/$/, '');
-    return this.withCacheBust(this.cachedUrl);
+    return this.withParams(this.cachedUrl, appSlug);
   }
 
-  private withCacheBust(url: string): string {
+  private withParams(url: string, appSlug?: string): string {
     const version =
       this.configService.get<string>('WEBAPP_CACHE_BUST')?.trim() || '7';
     const base = url.split('?')[0].replace(/\/$/, '');
-    return `${base}/?v=${version}`;
+    const params = new URLSearchParams();
+    params.set('v', version);
+    if (appSlug?.trim()) {
+      params.set('app', appSlug.trim().toLowerCase());
+    }
+    return `${base}/?${params.toString()}`;
+  }
+
+  private withCacheBust(url: string): string {
+    return this.withParams(url);
   }
 
   getAdminIds(): number[] {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PlatformApp } from './api/client';
 import {
   AppBackground,
@@ -39,9 +39,21 @@ function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
 }
 
 function AppContent() {
-  const { ready, error, user } = useTelegram();
+  const { ready, error, user, apps, startAppSlug } = useTelegram();
   const [activeApp, setActiveApp] = useState<PlatformApp | null>(null);
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const variant = backgroundVariant(activeApp);
+
+  useEffect(() => {
+    if (!ready || !user || deepLinkHandled || !startAppSlug) {
+      return;
+    }
+    const target = apps.find((app) => app.slug === startAppSlug) ?? null;
+    if (target) {
+      setActiveApp(target);
+    }
+    setDeepLinkHandled(true);
+  }, [ready, user, apps, startAppSlug, deepLinkHandled]);
 
   if (!ready) {
     return (

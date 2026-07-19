@@ -17,6 +17,7 @@ type TelegramContextValue = {
   isAdmin: boolean;
   initData: string;
   isTelegram: boolean;
+  startAppSlug: string | null;
   refreshSession: () => Promise<void>;
   haptic: (type?: 'light' | 'medium' | 'heavy') => void;
   close: () => void;
@@ -37,6 +38,39 @@ function readInitData(): string {
   return fromWindow || '';
 }
 
+function readStartAppSlug(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const fromQuery = new URLSearchParams(window.location.search).get('app');
+    if (fromQuery?.trim()) {
+      return fromQuery.trim().toLowerCase();
+    }
+  } catch {}
+
+  const fromSdk =
+    (
+      WebApp as unknown as {
+        initDataUnsafe?: { start_param?: string };
+      }
+    ).initDataUnsafe?.start_param?.trim() ||
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param?.trim();
+  if (fromSdk) {
+    return fromSdk.toLowerCase();
+  }
+
+  const hash = window.location.hash.replace(/^#/, '').trim();
+  if (!hash) {
+    return null;
+  }
+  if (hash.startsWith('app=')) {
+    return hash.slice(4).toLowerCase();
+  }
+  return hash.toLowerCase();
+}
+
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +79,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [initData, setInitData] = useState('');
   const [isTelegram, setIsTelegram] = useState(false);
+  const [startAppSlug] = useState<string | null>(() => readStartAppSlug());
 
   useEffect(() => {
     let alive = true;
@@ -138,6 +173,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       isAdmin,
       initData,
       isTelegram,
+      startAppSlug,
       refreshSession: async () => {
         const session = await api.auth(initData);
         setUser(session.user);
@@ -151,7 +187,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         WebApp.close();
       },
     }),
-    [ready, error, user, apps, isAdmin, initData, isTelegram],
+    [ready, error, user, apps, isAdmin, initData, isTelegram, startAppSlug],
   );
 
   return (

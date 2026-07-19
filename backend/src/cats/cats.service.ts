@@ -225,7 +225,7 @@ export class CatsService {
       return;
     }
 
-    const webAppUrl = this.botService.getWebAppUrl();
+    const webAppUrl = this.botService.getWebAppUrl('cats');
 
     for (const userId of subscribers) {
       try {

@@ -41,7 +41,7 @@ export class RemindersService {
       return;
     }
 
-    const webAppUrl = this.botService.getWebAppUrl();
+    const webAppUrl = this.botService.getWebAppUrl('meds');
     const now = Date.now();
 
     for (const [userId, items] of byUser) {
