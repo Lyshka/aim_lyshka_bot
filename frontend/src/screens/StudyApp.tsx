@@ -40,54 +40,28 @@ function normalizeUrl(raw: string) {
   return `https://${trimmed}`;
 }
 
-function titleFromUrl(url: string) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return host || url;
-  } catch {
-    return url;
-  }
-}
-
-function parseLinkLines(text: string): { title: string; url: string }[] {
+function parseUrlLines(text: string): string[] {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const items: { title: string; url: string }[] = [];
-
+  const urls: string[] = [];
   for (const line of lines) {
-    const byPipe = line.split('|').map((part) => part.trim());
-    if (byPipe.length >= 2) {
-      const url = normalizeUrl(byPipe[byPipe.length - 1]);
-      const title = byPipe.slice(0, -1).join(' | ').trim() || titleFromUrl(url);
-      if (url) {
-        items.push({ title, url });
-      }
+    const urlMatch =
+      line.match(/https?:\/\/\S+/i) ||
+      line.match(/(?:^|\s)?((?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)$/i);
+    const raw = (urlMatch?.[0] ?? line).trim();
+    const url = normalizeUrl(raw);
+    if (!url) {
       continue;
     }
-
-    const urlMatch = line.match(/https?:\/\/\S+/i) || line.match(
-      /(?:^|\s)((?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)$/i,
-    );
-    if (urlMatch) {
-      const rawUrl = urlMatch[0].trim();
-      const url = normalizeUrl(rawUrl);
-      const title = line.replace(rawUrl, '').trim() || titleFromUrl(url);
-      if (url) {
-        items.push({ title, url });
-      }
-      continue;
-    }
-
-    const url = normalizeUrl(line);
-    if (url) {
-      items.push({ title: titleFromUrl(url), url });
-    }
+    try {
+      new URL(url);
+      urls.push(url);
+    } catch {}
   }
-
-  return items;
+  return urls;
 }
 
 export function StudyApp({ onBack }: StudyAppProps) {
@@ -98,6 +72,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
   const [sectionTitle, setSectionTitle] = useState('');
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [addingLinkFor, setAddingLinkFor] = useState<string | null>(null);
+  const [linkTitle, setLinkTitle] = useState('');
   const [linksText, setLinksText] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -162,12 +137,22 @@ export function StudyApp({ onBack }: StudyAppProps) {
   }
 
   async function createLinks(sectionId: string) {
-    const links = parseLinkLines(linksText);
-    if (links.length === 0) {
+    const title = linkTitle.trim();
+    const urls = parseUrlLines(linksText);
+    if (!title) {
+      setError('Укажи название');
+      return;
+    }
+    if (urls.length === 0) {
       setError('Добавь хотя бы одну ссылку');
       return;
     }
     haptic('medium');
+    const links = urls.map((url) => ({
+      title,
+      url,
+    }));
+    setLinkTitle('');
     setLinksText('');
     setAddingLinkFor(null);
     await run(() => api.studyCreateLinks(initData, { sectionId, links }));
@@ -413,23 +398,32 @@ export function StudyApp({ onBack }: StudyAppProps) {
                         className="space-y-2 rounded-2xl px-3 py-3"
                         style={{ background: 'var(--tg-bg)' }}
                       >
+                        <input
+                          value={linkTitle}
+                          onChange={(e) => setLinkTitle(e.target.value)}
+                          placeholder="Название, например Docker"
+                          className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                          style={{ background: 'var(--tg-secondary)' }}
+                        />
                         <textarea
                           value={linksText}
                           onChange={(e) => setLinksText(e.target.value)}
                           rows={5}
                           placeholder={
-                            'Одна ссылка в строке\nhttps://site.com\nDocker | https://docs.docker.com\nReact https://react.dev'
+                            'Ссылки под этим названием, по одной в строке\nhttps://docs.docker.com\nhttps://hub.docker.com'
                           }
                           className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'var(--tg-secondary)' }}
                         />
                         <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
-                          Можно одну или список. Формат: url или Название | url
+                          Одно название + одна или несколько ссылок
                         </p>
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            disabled={busy || !linksText.trim()}
+                            disabled={
+                              busy || !linkTitle.trim() || !linksText.trim()
+                            }
                             onClick={() => void createLinks(section.id)}
                             className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                             style={{
@@ -443,6 +437,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
                             type="button"
                             onClick={() => {
                               setAddingLinkFor(null);
+                              setLinkTitle('');
                               setLinksText('');
                             }}
                             className="rounded-xl px-3 py-2 text-sm"
