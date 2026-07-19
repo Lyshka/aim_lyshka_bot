@@ -75,3 +75,21 @@ export class StudyDeleteUrlDto extends StudyInitDto {
   @MinLength(1)
   urlId!: string;
 }
+
+export class StudyRestoreSectionDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  sectionId!: string;
+}
+
+export class StudyRestoreItemDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  itemId!: string;
+}
+
+export class StudyRestoreUrlDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  urlId!: string;
+}

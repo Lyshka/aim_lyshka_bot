@@ -442,6 +442,38 @@ export type StudySection = {
 
 export type StudyOverview = {
   sections: StudySection[];
+  isAdmin: boolean;
+};
+
+export type StudyTrashSection = {
+  id: string;
+  title: string;
+  deletedAt: string | null;
+  itemsCount: number;
+  urlsCount: number;
+};
+
+export type StudyTrashItem = {
+  id: string;
+  title: string;
+  sectionTitle: string;
+  deletedAt: string | null;
+  urlsCount: number;
+};
+
+export type StudyTrashUrl = {
+  id: string;
+  url: string;
+  host: string;
+  itemTitle: string;
+  sectionTitle: string;
+  deletedAt: string | null;
+};
+
+export type StudyTrash = {
+  sections: StudyTrashSection[];
+  items: StudyTrashItem[];
+  urls: StudyTrashUrl[];
 };
 
 export const api = {
@@ -566,6 +598,31 @@ export const api = {
     request<StudyOverview>('/api/study/urls/delete', {
       method: 'POST',
       body: JSON.stringify({ initData, urlId }),
+    }),
+  studyTrash: (initData: string) =>
+    request<StudyTrash>('/api/study/trash', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  studyRestoreSection: (initData: string, sectionId: string) =>
+    request<StudyTrash>('/api/study/sections/restore', {
+      method: 'POST',
+      body: JSON.stringify({ initData, sectionId }),
+    }),
+  studyRestoreItem: (initData: string, itemId: string) =>
+    request<StudyTrash>('/api/study/items/restore', {
+      method: 'POST',
+      body: JSON.stringify({ initData, itemId }),
+    }),
+  studyRestoreUrl: (initData: string, urlId: string) =>
+    request<StudyTrash>('/api/study/urls/restore', {
+      method: 'POST',
+      body: JSON.stringify({ initData, urlId }),
+    }),
+  studyPurgeTrash: (initData: string) =>
+    request<StudyTrash>('/api/study/trash/purge', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
     }),
   healthManual: (
     initData: string,

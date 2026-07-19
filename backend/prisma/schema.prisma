@@ -231,12 +231,14 @@ model StudySection {
   userId    BigInt
   title     String
   sortOrder Int         @default(0)
+  deletedAt DateTime?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     StudyItem[]
 
   @@index([userId, sortOrder])
+  @@index([userId, deletedAt])
 }
 
 model StudyItem {
@@ -246,6 +248,7 @@ model StudyItem {
   title     String
   note      String         @default("")
   sortOrder Int            @default(0)
+  deletedAt DateTime?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -254,6 +257,7 @@ model StudyItem {
 
   @@index([userId, sectionId])
   @@index([sectionId, sortOrder])
+  @@index([userId, deletedAt])
 }
 
 model StudyItemUrl {
@@ -261,8 +265,10 @@ model StudyItemUrl {
   itemId    String
   url       String
   sortOrder Int       @default(0)
+  deletedAt DateTime?
   createdAt DateTime  @default(now())
   item      StudyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId, sortOrder])
+  @@index([itemId, deletedAt])
 }

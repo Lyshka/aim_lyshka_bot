@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   api,
   type StudyItem,
   type StudyItemUrl,
   type StudyOverview,
   type StudySection,
+  type StudyTrash,
 } from '../api/client';
+import { Shell } from '../components/Shell';
 import { useTelegram } from '../telegram/TelegramProvider';
 
 type LinksAppProps = {
   onBack: () => void;
 };
+
+type Tab = 'list' | 'trash';
 
 function openUrl(url: string) {
   try {
@@ -67,9 +71,23 @@ function parseUrlLines(text: string): string[] {
   return urls;
 }
 
+function formatDeletedAt(value: string | null) {
+  if (!value) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
 export function LinksApp({ onBack }: LinksAppProps) {
-  const { initData, haptic } = useTelegram();
+  const { initData, haptic, isAdmin } = useTelegram();
+  const [tab, setTab] = useState<Tab>('list');
   const [data, setData] = useState<StudyOverview | null>(null);
+  const [trash, setTrash] = useState<StudyTrash | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sectionTitle, setSectionTitle] = useState('');
@@ -80,11 +98,30 @@ export function LinksApp({ onBack }: LinksAppProps) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
+  const canTrash = isAdmin || Boolean(data?.isAdmin);
+
+  const tabs = useMemo(() => {
+    const base: { id: Tab; label: string }[] = [
+      { id: 'list', label: 'Ссылки' },
+    ];
+    if (canTrash) {
+      base.push({ id: 'trash', label: 'Корзина' });
+    }
+    return base;
+  }, [canTrash]);
+
   const load = useCallback(async () => {
     const overview = await api.studyOverview(initData);
     setData(overview);
     setError(null);
     return overview;
+  }, [initData]);
+
+  const loadTrash = useCallback(async () => {
+    const next = await api.studyTrash(initData);
+    setTrash(next);
+    setError(null);
+    return next;
   }, [initData]);
 
   useEffect(() => {
@@ -93,12 +130,35 @@ export function LinksApp({ onBack }: LinksAppProps) {
     });
   }, [load]);
 
-  async function run(action: () => Promise<StudyOverview>) {
+  useEffect(() => {
+    if (tab !== 'trash' || !canTrash) {
+      return;
+    }
+    void loadTrash().catch((err) => {
+      setError(err instanceof Error ? err.message : 'Ошибка корзины');
+    });
+  }, [tab, canTrash, loadTrash]);
+
+  async function runOverview(action: () => Promise<StudyOverview>) {
     setBusy(true);
     setError(null);
     try {
       const next = await action();
       setData(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runTrash(action: () => Promise<StudyTrash>) {
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await action();
+      setTrash(next);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
     } finally {
@@ -113,7 +173,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
     haptic('medium');
     const title = sectionTitle.trim();
     setSectionTitle('');
-    await run(() => api.studyCreateSection(initData, title));
+    await runOverview(() => api.studyCreateSection(initData, title));
   }
 
   async function renameSection(section: StudySection) {
@@ -123,14 +183,14 @@ export function LinksApp({ onBack }: LinksAppProps) {
     haptic('light');
     const title = renameValue.trim();
     setRenamingId(null);
-    await run(() =>
+    await runOverview(() =>
       api.studyUpdateSection(initData, { sectionId: section.id, title }),
     );
   }
 
   async function removeSection(section: StudySection) {
     haptic('heavy');
-    await run(() => api.studyDeleteSection(initData, section.id));
+    await runOverview(() => api.studyDeleteSection(initData, section.id));
     if (openSectionId === section.id) {
       setOpenSectionId(null);
     }
@@ -154,23 +214,30 @@ export function LinksApp({ onBack }: LinksAppProps) {
     setItemTitle('');
     setUrlsText('');
     setAddingItemFor(null);
-    await run(() =>
+    await runOverview(() =>
       api.studyCreateItem(initData, { sectionId, title, urls }),
     );
   }
 
   async function removeItem(item: StudyItem) {
     haptic('heavy');
-    await run(() => api.studyDeleteItem(initData, item.id));
+    await runOverview(() => api.studyDeleteItem(initData, item.id));
   }
 
   async function removeUrl(entry: StudyItemUrl) {
     haptic('heavy');
-    await run(() => api.studyDeleteUrl(initData, entry.id));
+    await runOverview(() => api.studyDeleteUrl(initData, entry.id));
   }
 
-  return (
-    <div className="relative mx-auto w-full max-w-md px-4 pt-5 pb-8">
+  const trashCount =
+    (trash?.sections.length ?? 0) +
+    (trash?.items.length ?? 0) +
+    (trash?.urls.length ?? 0);
+
+  const activeTab = tabs.some((item) => item.id === tab) ? tab : 'list';
+
+  const content = (
+    <>
       <button
         type="button"
         onClick={() => {
@@ -187,13 +254,140 @@ export function LinksApp({ onBack }: LinksAppProps) {
 
       <div className="mt-3 mb-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
-          Ссылки
+          {activeTab === 'trash' ? 'Корзина' : 'Ссылки'}
         </h1>
         <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-          Разделы, темы и полезные ссылки.
+          {activeTab === 'trash'
+            ? 'Удалённое можно вернуть. Только для админа.'
+            : 'Разделы, темы и полезные ссылки.'}
         </p>
       </div>
 
+      {error ? (
+        <p
+          className="mb-3 rounded-2xl px-4 py-3 text-sm"
+          style={{
+            background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
+            color: '#9f1239',
+          }}
+        >
+          {error}
+        </p>
+      ) : null}
+
+      {activeTab === 'list' ? (
+        <ListTab
+          data={data}
+          busy={busy}
+          sectionTitle={sectionTitle}
+          setSectionTitle={setSectionTitle}
+          openSectionId={openSectionId}
+          setOpenSectionId={setOpenSectionId}
+          addingItemFor={addingItemFor}
+          setAddingItemFor={setAddingItemFor}
+          itemTitle={itemTitle}
+          setItemTitle={setItemTitle}
+          urlsText={urlsText}
+          setUrlsText={setUrlsText}
+          renamingId={renamingId}
+          setRenamingId={setRenamingId}
+          renameValue={renameValue}
+          setRenameValue={setRenameValue}
+          haptic={haptic}
+          onCreateSection={() => void createSection()}
+          onRenameSection={(section) => void renameSection(section)}
+          onRemoveSection={(section) => void removeSection(section)}
+          onCreateItem={(sectionId) => void createItem(sectionId)}
+          onRemoveItem={(item) => void removeItem(item)}
+          onRemoveUrl={(entry) => void removeUrl(entry)}
+        />
+      ) : (
+        <TrashTab
+          trash={trash}
+          trashCount={trashCount}
+          busy={busy}
+          haptic={haptic}
+          onRestoreSection={(id) =>
+            void runTrash(() => api.studyRestoreSection(initData, id))
+          }
+          onRestoreItem={(id) =>
+            void runTrash(() => api.studyRestoreItem(initData, id))
+          }
+          onRestoreUrl={(id) =>
+            void runTrash(() => api.studyRestoreUrl(initData, id))
+          }
+          onPurge={() => void runTrash(() => api.studyPurgeTrash(initData))}
+        />
+      )}
+    </>
+  );
+
+  if (canTrash) {
+    return (
+      <Shell tab={activeTab} onTabChange={setTab} tabs={tabs}>
+        {content}
+      </Shell>
+    );
+  }
+
+  return (
+    <div className="relative mx-auto w-full max-w-md px-4 pt-5 pb-8">
+      {content}
+    </div>
+  );
+}
+
+function ListTab({
+  data,
+  busy,
+  sectionTitle,
+  setSectionTitle,
+  openSectionId,
+  setOpenSectionId,
+  addingItemFor,
+  setAddingItemFor,
+  itemTitle,
+  setItemTitle,
+  urlsText,
+  setUrlsText,
+  renamingId,
+  setRenamingId,
+  renameValue,
+  setRenameValue,
+  haptic,
+  onCreateSection,
+  onRenameSection,
+  onRemoveSection,
+  onCreateItem,
+  onRemoveItem,
+  onRemoveUrl,
+}: {
+  data: StudyOverview | null;
+  busy: boolean;
+  sectionTitle: string;
+  setSectionTitle: (value: string) => void;
+  openSectionId: string | null;
+  setOpenSectionId: (value: string | null) => void;
+  addingItemFor: string | null;
+  setAddingItemFor: (value: string | null) => void;
+  itemTitle: string;
+  setItemTitle: (value: string) => void;
+  urlsText: string;
+  setUrlsText: (value: string) => void;
+  renamingId: string | null;
+  setRenamingId: (value: string | null) => void;
+  renameValue: string;
+  setRenameValue: (value: string) => void;
+  haptic: (type?: 'light' | 'medium' | 'heavy') => void;
+  onCreateSection: () => void;
+  onRenameSection: (section: StudySection) => void;
+  onRemoveSection: (section: StudySection) => void;
+  onCreateItem: (sectionId: string) => void;
+  onRemoveItem: (item: StudyItem) => void;
+  onRemoveUrl: (entry: StudyItemUrl) => void;
+}) {
+  return (
+    <>
       <section
         className="space-y-3 rounded-3xl px-4 py-4"
         style={{
@@ -208,14 +402,14 @@ export function LinksApp({ onBack }: LinksAppProps) {
           style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              void createSection();
+              onCreateSection();
             }
           }}
         />
         <button
           type="button"
           disabled={busy || !sectionTitle.trim()}
-          onClick={() => void createSection()}
+          onClick={onCreateSection}
           className="w-full rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(145deg, #65a30d, #3f6212)',
@@ -225,18 +419,6 @@ export function LinksApp({ onBack }: LinksAppProps) {
           Добавить раздел
         </button>
       </section>
-
-      {error ? (
-        <p
-          className="mt-3 rounded-2xl px-4 py-3 text-sm"
-          style={{
-            background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-            color: '#9f1239',
-          }}
-        >
-          {error}
-        </p>
-      ) : null}
 
       <div className="mt-4 space-y-3">
         {!data ? (
@@ -297,7 +479,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void removeSection(section)}
+                    onClick={() => onRemoveSection(section)}
                     className="rounded-xl px-2.5 py-1.5 text-xs font-medium"
                     style={{
                       background:
@@ -321,7 +503,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          void renameSection(section);
+                          onRenameSection(section);
                         }
                       }}
                     />
@@ -329,7 +511,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => void renameSection(section)}
+                        onClick={() => onRenameSection(section)}
                         className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold"
                         style={{
                           background: '#65a30d',
@@ -380,7 +562,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                             <button
                               type="button"
                               disabled={busy}
-                              onClick={() => void removeItem(item)}
+                              onClick={() => onRemoveItem(item)}
                               className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium"
                               style={{
                                 background:
@@ -414,7 +596,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                                 <button
                                   type="button"
                                   disabled={busy}
-                                  onClick={() => void removeUrl(entry)}
+                                  onClick={() => onRemoveUrl(entry)}
                                   className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
                                   style={{
                                     background:
@@ -465,7 +647,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
                             disabled={
                               busy || !itemTitle.trim() || !urlsText.trim()
                             }
-                            onClick={() => void createItem(section.id)}
+                            onClick={() => onCreateItem(section.id)}
                             className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                             style={{
                               background: '#65a30d',
@@ -514,6 +696,189 @@ export function LinksApp({ onBack }: LinksAppProps) {
           })
         )}
       </div>
+    </>
+  );
+}
+
+function TrashTab({
+  trash,
+  trashCount,
+  busy,
+  haptic,
+  onRestoreSection,
+  onRestoreItem,
+  onRestoreUrl,
+  onPurge,
+}: {
+  trash: StudyTrash | null;
+  trashCount: number;
+  busy: boolean;
+  haptic: (type?: 'light' | 'medium' | 'heavy') => void;
+  onRestoreSection: (id: string) => void;
+  onRestoreItem: (id: string) => void;
+  onRestoreUrl: (id: string) => void;
+  onPurge: () => void;
+}) {
+  if (!trash) {
+    return (
+      <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+        Загрузка корзины…
+      </p>
+    );
+  }
+
+  if (trashCount === 0) {
+    return (
+      <div
+        className="rounded-3xl px-5 py-8 text-center"
+        style={{
+          background: 'color-mix(in srgb, white 75%, #65a30d)',
+        }}
+      >
+        <p className="font-display text-lg font-semibold">Корзина пуста</p>
+        <p className="mt-1 text-sm" style={{ color: 'var(--tg-hint)' }}>
+          Удалённые разделы, темы и ссылки появятся здесь.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="flex items-center justify-between gap-3 rounded-3xl px-4 py-3"
+        style={{
+          background: 'color-mix(in srgb, white 72%, #65a30d)',
+        }}
+      >
+        <div>
+          <p className="text-sm font-semibold">{trashCount} в корзине</p>
+          <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
+            Восстановление вернёт элемент на место
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            haptic('heavy');
+            onPurge();
+          }}
+          className="rounded-2xl px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          style={{
+            background: 'color-mix(in srgb, #b42318 14%, var(--tg-secondary))',
+            color: '#9f1239',
+          }}
+        >
+          Очистить
+        </button>
+      </div>
+
+      {trash.sections.length > 0 ? (
+        <TrashGroup title="Разделы">
+          {trash.sections.map((section) => (
+            <TrashCard
+              key={section.id}
+              title={section.title}
+              meta={`${section.itemsCount} тем · ${section.urlsCount} ссылок · ${formatDeletedAt(section.deletedAt)}`}
+              busy={busy}
+              onRestore={() => {
+                haptic('medium');
+                onRestoreSection(section.id);
+              }}
+            />
+          ))}
+        </TrashGroup>
+      ) : null}
+
+      {trash.items.length > 0 ? (
+        <TrashGroup title="Темы">
+          {trash.items.map((item) => (
+            <TrashCard
+              key={item.id}
+              title={item.title}
+              meta={`${item.sectionTitle} · ${item.urlsCount} ссылок · ${formatDeletedAt(item.deletedAt)}`}
+              busy={busy}
+              onRestore={() => {
+                haptic('medium');
+                onRestoreItem(item.id);
+              }}
+            />
+          ))}
+        </TrashGroup>
+      ) : null}
+
+      {trash.urls.length > 0 ? (
+        <TrashGroup title="Ссылки">
+          {trash.urls.map((entry) => (
+            <TrashCard
+              key={entry.id}
+              title={entry.host}
+              meta={`${entry.itemTitle} · ${entry.sectionTitle} · ${formatDeletedAt(entry.deletedAt)}`}
+              busy={busy}
+              onRestore={() => {
+                haptic('medium');
+                onRestoreUrl(entry.id);
+              }}
+            />
+          ))}
+        </TrashGroup>
+      ) : null}
     </div>
+  );
+}
+
+function TrashGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2">
+      <p className="px-1 text-sm font-semibold">{title}</p>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function TrashCard({
+  title,
+  meta,
+  busy,
+  onRestore,
+}: {
+  title: string;
+  meta: string;
+  busy: boolean;
+  onRestore: () => void;
+}) {
+  return (
+    <article
+      className="flex items-center gap-3 rounded-3xl px-4 py-3"
+      style={{
+        background: 'color-mix(in srgb, white 75%, #65a30d)',
+      }}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{title}</p>
+        <p className="mt-0.5 truncate text-[11px]" style={{ color: 'var(--tg-hint)' }}>
+          {meta}
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onRestore}
+        className="shrink-0 rounded-2xl px-3 py-2 text-xs font-semibold disabled:opacity-50"
+        style={{
+          background: 'linear-gradient(145deg, #65a30d, #3f6212)',
+          color: '#f7fee7',
+        }}
+      >
+        Вернуть
+      </button>
+    </article>
   );
 }
