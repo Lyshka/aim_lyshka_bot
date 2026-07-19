@@ -54,10 +54,10 @@ const CATALOG = [
     isSystem: false,
   },
   {
-    slug: 'study',
-    name: 'Учеба',
-    description: 'Разделы и полезные ссылки',
-    icon: 'study',
+    slug: 'links',
+    name: 'Ссылки',
+    description: 'Разделы, темы и полезные ссылки',
+    icon: 'links',
     color: '#65a30d',
     sortOrder: 60,
     isSystem: false,
@@ -125,6 +125,8 @@ export class AppsService implements OnModuleInit {
   }
 
   async ensureCatalog() {
+    await this.renameStudyAppToLinks();
+
     for (const item of CATALOG) {
       await this.prisma.app.upsert({
         where: { slug: item.slug },
@@ -166,6 +168,48 @@ export class AppsService implements OnModuleInit {
         update: {},
       });
     }
+  }
+
+  private async renameStudyAppToLinks() {
+    const legacy = await this.prisma.app.findUnique({ where: { slug: 'study' } });
+    if (!legacy) {
+      return;
+    }
+
+    const current = await this.prisma.app.findUnique({ where: { slug: 'links' } });
+    if (!current) {
+      await this.prisma.app.update({
+        where: { id: legacy.id },
+        data: {
+          slug: 'links',
+          name: 'Ссылки',
+          description: 'Разделы, темы и полезные ссылки',
+          icon: 'links',
+        },
+      });
+      return;
+    }
+
+    const grants = await this.prisma.userAppGrant.findMany({
+      where: { appId: legacy.id },
+    });
+    for (const grant of grants) {
+      await this.prisma.userAppGrant.upsert({
+        where: {
+          userId_appId: {
+            userId: grant.userId,
+            appId: current.id,
+          },
+        },
+        create: {
+          userId: grant.userId,
+          appId: current.id,
+        },
+        update: {},
+      });
+    }
+    await this.prisma.userAppGrant.deleteMany({ where: { appId: legacy.id } });
+    await this.prisma.app.delete({ where: { id: legacy.id } });
   }
 
   async listForUser(userId: number) {

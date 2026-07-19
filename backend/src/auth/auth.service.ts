@@ -77,7 +77,7 @@ export class AuthService {
         .setGrant(userId, 'stats', true)
         .catch(() => undefined);
       await this.appsService
-        .setGrant(userId, 'study', true)
+        .setGrant(userId, 'links', true)
         .catch(() => undefined);
     }
 

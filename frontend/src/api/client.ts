@@ -418,20 +418,26 @@ export type StatsLookup = {
   };
 };
 
-export type StudyLink = {
+export type StudyItemUrl = {
+  id: string;
+  url: string;
+  sortOrder: number;
+};
+
+export type StudyItem = {
   id: string;
   sectionId: string;
   title: string;
-  url: string;
   note: string;
   sortOrder: number;
+  urls: StudyItemUrl[];
 };
 
 export type StudySection = {
   id: string;
   title: string;
   sortOrder: number;
-  links: StudyLink[];
+  items: StudyItem[];
 };
 
 export type StudyOverview = {
@@ -538,35 +544,23 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, sectionId }),
     }),
-  studyCreateLinks: (
+  studyCreateItem: (
     initData: string,
     data: {
       sectionId: string;
-      links: { title: string; url: string; note?: string }[];
-    },
-  ) =>
-    request<StudyOverview>('/api/study/links/create', {
-      method: 'POST',
-      body: JSON.stringify({ initData, ...data }),
-    }),
-  studyUpdateLink: (
-    initData: string,
-    data: {
-      linkId: string;
-      title?: string;
-      url?: string;
+      title: string;
+      urls: string[];
       note?: string;
-      sectionId?: string;
     },
   ) =>
-    request<StudyOverview>('/api/study/links/update', {
+    request<StudyOverview>('/api/study/items/create', {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
-  studyDeleteLink: (initData: string, linkId: string) =>
-    request<StudyOverview>('/api/study/links/delete', {
+  studyDeleteItem: (initData: string, itemId: string) =>
+    request<StudyOverview>('/api/study/items/delete', {
       method: 'POST',
-      body: JSON.stringify({ initData, linkId }),
+      body: JSON.stringify({ initData, itemId }),
     }),
   healthManual: (
     initData: string,

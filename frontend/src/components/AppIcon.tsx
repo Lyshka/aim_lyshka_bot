@@ -138,28 +138,23 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
-  if (slug === 'study') {
+  if (slug === 'links') {
     return (
       <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
         <path
-          d="M10 14.5c0-1.4 1.1-2.5 2.5-2.5H23v24.5H12.5A2.5 2.5 0 0 1 10 34V14.5Z"
-          fill="currentColor"
-        />
-        <path
-          d="M38 14.5c0-1.4-1.1-2.5-2.5-2.5H25v24.5h10.5a2.5 2.5 0 0 0 2.5-2.5V14.5Z"
-          fill="currentColor"
-          opacity="0.75"
-        />
-        <path
-          d="M23 12h2v24.5h-2V12Z"
-          fill="#fff"
-          opacity="0.35"
-        />
-        <path
-          d="M15 18h5M15 22.5h5M28 18h5M28 22.5h5"
-          stroke="#fff"
-          strokeWidth="1.8"
+          d="M20.5 27.5a7.5 7.5 0 0 1 0-10.6l4.2-4.2a7.5 7.5 0 1 1 10.6 10.6l-2.1 2.1"
+          stroke="currentColor"
+          strokeWidth="3.2"
           strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M27.5 20.5a7.5 7.5 0 0 1 0 10.6l-4.2 4.2a7.5 7.5 0 1 1-10.6-10.6l2.1-2.1"
+          stroke="#fff"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.9"
         />
       </svg>
     );
@@ -221,7 +216,7 @@ export function appAccent(slug: string, fallback: string) {
       glow: 'rgba(14, 116, 144, 0.4)',
     };
   }
-  if (slug === 'study') {
+  if (slug === 'links') {
     return {
       from: '#84cc16',
       to: '#3f6212',

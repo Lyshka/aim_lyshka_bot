@@ -16,43 +16,26 @@ function normalizeUrl(raw: string) {
   return `https://${trimmed}`;
 }
 
-function serializeLink(link: {
-  id: string;
-  sectionId: string;
-  title: string;
-  url: string;
-  note: string;
-  sortOrder: number;
-}) {
-  return {
-    id: link.id,
-    sectionId: link.sectionId,
-    title: link.title,
-    url: link.url,
-    note: link.note,
-    sortOrder: link.sortOrder,
-  };
-}
-
-function serializeSection(section: {
-  id: string;
-  title: string;
-  sortOrder: number;
-  links: {
-    id: string;
-    sectionId: string;
-    title: string;
-    url: string;
-    note: string;
-    sortOrder: number;
-  }[];
-}) {
-  return {
-    id: section.id,
-    title: section.title,
-    sortOrder: section.sortOrder,
-    links: section.links.map(serializeLink),
-  };
+function prepareUrls(rawUrls: string[]) {
+  const urls: string[] = [];
+  for (const raw of rawUrls) {
+    const url = normalizeUrl(raw);
+    if (!url) {
+      continue;
+    }
+    try {
+      new URL(url);
+    } catch {
+      throw new BadRequestException(`Некорректная ссылка: ${raw}`);
+    }
+    if (!urls.includes(url)) {
+      urls.push(url);
+    }
+  }
+  if (urls.length === 0) {
+    throw new BadRequestException('Добавь хотя бы одну ссылку');
+  }
+  return urls;
 }
 
 @Injectable()
@@ -64,14 +47,35 @@ export class StudyService {
       where: { userId },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
-        links: {
+        items: {
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+          include: {
+            urls: {
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            },
+          },
         },
       },
     });
 
     return {
-      sections: sections.map(serializeSection),
+      sections: sections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        sortOrder: section.sortOrder,
+        items: section.items.map((item) => ({
+          id: item.id,
+          sectionId: item.sectionId,
+          title: item.title,
+          note: item.note,
+          sortOrder: item.sortOrder,
+          urls: item.urls.map((entry) => ({
+            id: entry.id,
+            url: entry.url,
+            sortOrder: entry.sortOrder,
+          })),
+        })),
+      })),
     };
   }
 
@@ -131,11 +135,13 @@ export class StudyService {
     return this.overview(userId);
   }
 
-  async createLinks(
+  async createItem(
     userId: number,
     data: {
       sectionId: string;
-      links: { title: string; url: string; note?: string }[];
+      title: string;
+      urls: string[];
+      note?: string;
     },
   ) {
     const section = await this.prisma.studySection.findFirst({
@@ -145,113 +151,47 @@ export class StudyService {
       throw new NotFoundException('Раздел не найден');
     }
 
-    if (!data.links.length) {
-      throw new BadRequestException('Добавь хотя бы одну ссылку');
+    const title = data.title.trim();
+    if (!title) {
+      throw new BadRequestException('Нужно название');
     }
 
-    const prepared: { title: string; url: string; note: string }[] = [];
-    for (const item of data.links) {
-      const title = item.title.trim();
-      const url = normalizeUrl(item.url);
-      if (!title || !url) {
-        throw new BadRequestException('Нужны название и ссылка');
-      }
-      try {
-        new URL(url);
-      } catch {
-        throw new BadRequestException(`Некорректная ссылка: ${item.url}`);
-      }
-      prepared.push({
-        title,
-        url,
-        note: (item.note ?? '').trim(),
-      });
-    }
+    const urls = prepareUrls(data.urls);
 
-    const last = await this.prisma.studyLink.findFirst({
+    const last = await this.prisma.studyItem.findFirst({
       where: { sectionId: section.id, userId },
       orderBy: { sortOrder: 'desc' },
       select: { sortOrder: true },
     });
 
-    let sortOrder = last?.sortOrder ?? -1;
-    await this.prisma.studyLink.createMany({
-      data: prepared.map((item) => {
-        sortOrder += 1;
-        return {
-          userId,
-          sectionId: section.id,
-          title: item.title,
-          url: item.url,
-          note: item.note,
-          sortOrder,
-        };
-      }),
-    });
-
-    return this.overview(userId);
-  }
-
-  async updateLink(
-    userId: number,
-    data: {
-      linkId: string;
-      title?: string;
-      url?: string;
-      note?: string;
-      sectionId?: string;
-    },
-  ) {
-    const link = await this.prisma.studyLink.findFirst({
-      where: { id: data.linkId, userId },
-    });
-    if (!link) {
-      throw new NotFoundException('Ссылка не найдена');
-    }
-
-    let sectionId = link.sectionId;
-    if (data.sectionId && data.sectionId !== link.sectionId) {
-      const section = await this.prisma.studySection.findFirst({
-        where: { id: data.sectionId, userId },
-      });
-      if (!section) {
-        throw new NotFoundException('Раздел не найден');
-      }
-      sectionId = section.id;
-    }
-
-    let nextUrl: string | undefined;
-    if (data.url !== undefined) {
-      nextUrl = normalizeUrl(data.url);
-      try {
-        new URL(nextUrl);
-      } catch {
-        throw new BadRequestException('Некорректная ссылка');
-      }
-    }
-
-    await this.prisma.studyLink.update({
-      where: { id: link.id },
+    await this.prisma.studyItem.create({
       data: {
-        sectionId,
-        title: data.title?.trim() || undefined,
-        url: nextUrl,
-        note: data.note !== undefined ? data.note.trim() : undefined,
+        userId,
+        sectionId: section.id,
+        title,
+        note: (data.note ?? '').trim(),
+        sortOrder: (last?.sortOrder ?? -1) + 1,
+        urls: {
+          create: urls.map((url, index) => ({
+            url,
+            sortOrder: index,
+          })),
+        },
       },
     });
 
     return this.overview(userId);
   }
 
-  async deleteLink(userId: number, linkId: string) {
-    const link = await this.prisma.studyLink.findFirst({
-      where: { id: linkId, userId },
+  async deleteItem(userId: number, itemId: string) {
+    const item = await this.prisma.studyItem.findFirst({
+      where: { id: itemId, userId },
     });
-    if (!link) {
-      throw new NotFoundException('Ссылка не найдена');
+    if (!item) {
+      throw new NotFoundException('Элемент не найден');
     }
 
-    await this.prisma.studyLink.delete({ where: { id: link.id } });
+    await this.prisma.studyItem.delete({ where: { id: item.id } });
     return this.overview(userId);
   }
 }

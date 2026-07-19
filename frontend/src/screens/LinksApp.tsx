@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   api,
-  type StudyLink,
+  type StudyItem,
   type StudyOverview,
   type StudySection,
 } from '../api/client';
 import { useTelegram } from '../telegram/TelegramProvider';
 
-type StudyAppProps = {
+type LinksAppProps = {
   onBack: () => void;
 };
 
@@ -58,22 +58,24 @@ function parseUrlLines(text: string): string[] {
     }
     try {
       new URL(url);
-      urls.push(url);
+      if (!urls.includes(url)) {
+        urls.push(url);
+      }
     } catch {}
   }
   return urls;
 }
 
-export function StudyApp({ onBack }: StudyAppProps) {
+export function LinksApp({ onBack }: LinksAppProps) {
   const { initData, haptic } = useTelegram();
   const [data, setData] = useState<StudyOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sectionTitle, setSectionTitle] = useState('');
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
-  const [addingLinkFor, setAddingLinkFor] = useState<string | null>(null);
-  const [linkTitle, setLinkTitle] = useState('');
-  const [linksText, setLinksText] = useState('');
+  const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
+  const [itemTitle, setItemTitle] = useState('');
+  const [urlsText, setUrlsText] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -131,14 +133,14 @@ export function StudyApp({ onBack }: StudyAppProps) {
     if (openSectionId === section.id) {
       setOpenSectionId(null);
     }
-    if (addingLinkFor === section.id) {
-      setAddingLinkFor(null);
+    if (addingItemFor === section.id) {
+      setAddingItemFor(null);
     }
   }
 
-  async function createLinks(sectionId: string) {
-    const title = linkTitle.trim();
-    const urls = parseUrlLines(linksText);
+  async function createItem(sectionId: string) {
+    const title = itemTitle.trim();
+    const urls = parseUrlLines(urlsText);
     if (!title) {
       setError('Укажи название');
       return;
@@ -148,19 +150,17 @@ export function StudyApp({ onBack }: StudyAppProps) {
       return;
     }
     haptic('medium');
-    const links = urls.map((url) => ({
-      title,
-      url,
-    }));
-    setLinkTitle('');
-    setLinksText('');
-    setAddingLinkFor(null);
-    await run(() => api.studyCreateLinks(initData, { sectionId, links }));
+    setItemTitle('');
+    setUrlsText('');
+    setAddingItemFor(null);
+    await run(() =>
+      api.studyCreateItem(initData, { sectionId, title, urls }),
+    );
   }
 
-  async function removeLink(link: StudyLink) {
+  async function removeItem(item: StudyItem) {
     haptic('heavy');
-    await run(() => api.studyDeleteLink(initData, link.id));
+    await run(() => api.studyDeleteItem(initData, item.id));
   }
 
   return (
@@ -181,10 +181,10 @@ export function StudyApp({ onBack }: StudyAppProps) {
 
       <div className="mt-3 mb-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
-          Учеба
+          Ссылки
         </h1>
         <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-          Свои разделы и полезные ссылки.
+          Разделы, темы и полезные ссылки.
         </p>
       </div>
 
@@ -245,7 +245,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
               color: 'var(--tg-hint)',
             }}
           >
-            Пока пусто. Создай раздел — веб, DevOps, игры — и кидай туда ссылки.
+            Пока пусто. Создай раздел, потом тему с несколькими ссылками.
           </p>
         ) : (
           data.sections.map((section) => {
@@ -271,7 +271,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
                       {section.title}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-                      {section.links.length} ссылок
+                      {section.items.length} тем
                       {open ? ' · скрыть' : ' · открыть'}
                     </p>
                   </button>
@@ -346,40 +346,36 @@ export function StudyApp({ onBack }: StudyAppProps) {
 
                 {open ? (
                   <div className="space-y-2 border-t border-black/5 px-4 py-3">
-                    {section.links.length === 0 ? (
+                    {section.items.length === 0 ? (
                       <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                        В разделе пока нет ссылок.
+                        Пока нет тем. Добавь название и ссылки к нему.
                       </p>
                     ) : (
-                      section.links.map((link) => (
+                      section.items.map((item) => (
                         <article
-                          key={link.id}
+                          key={item.id}
                           className="rounded-2xl px-3 py-3"
                           style={{ background: 'var(--tg-bg)' }}
                         >
-                          <button
-                            type="button"
-                            className="w-full text-left"
-                            onClick={() => {
-                              haptic('light');
-                              openUrl(link.url);
-                            }}
-                          >
-                            <p className="text-sm font-semibold">{link.title}</p>
-                            <p
-                              className="mt-0.5 truncate text-xs"
-                              style={{ color: 'var(--tg-hint)' }}
-                            >
-                              {hostLabel(link.url)}
-                              {link.note ? ` · ${link.note}` : ''}
-                            </p>
-                          </button>
-                          <div className="mt-2 flex justify-end">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold">
+                                {item.title}
+                              </p>
+                              {item.note ? (
+                                <p
+                                  className="mt-0.5 text-xs"
+                                  style={{ color: 'var(--tg-hint)' }}
+                                >
+                                  {item.note}
+                                </p>
+                              ) : null}
+                            </div>
                             <button
                               type="button"
                               disabled={busy}
-                              onClick={() => void removeLink(link)}
-                              className="rounded-lg px-2 py-1 text-[11px] font-medium"
+                              onClick={() => void removeItem(item)}
+                              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium"
                               style={{
                                 background:
                                   'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
@@ -389,42 +385,64 @@ export function StudyApp({ onBack }: StudyAppProps) {
                               Удалить
                             </button>
                           </div>
+                          <div className="mt-2 space-y-1.5">
+                            {item.urls.map((entry) => (
+                              <button
+                                key={entry.id}
+                                type="button"
+                                className="block w-full truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
+                                style={{
+                                  background: 'var(--tg-secondary)',
+                                  color: '#3f6212',
+                                }}
+                                onClick={() => {
+                                  haptic('light');
+                                  openUrl(entry.url);
+                                }}
+                              >
+                                {hostLabel(entry.url)}
+                              </button>
+                            ))}
+                          </div>
                         </article>
                       ))
                     )}
 
-                    {addingLinkFor === section.id ? (
+                    {addingItemFor === section.id ? (
                       <div
                         className="space-y-2 rounded-2xl px-3 py-3"
                         style={{ background: 'var(--tg-bg)' }}
                       >
                         <input
-                          value={linkTitle}
-                          onChange={(e) => setLinkTitle(e.target.value)}
-                          placeholder="Название, например Docker"
+                          value={itemTitle}
+                          onChange={(e) => setItemTitle(e.target.value)}
+                          placeholder="Название темы, например Docker"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'var(--tg-secondary)' }}
                         />
                         <textarea
-                          value={linksText}
-                          onChange={(e) => setLinksText(e.target.value)}
+                          value={urlsText}
+                          onChange={(e) => setUrlsText(e.target.value)}
                           rows={5}
                           placeholder={
-                            'Ссылки под этим названием, по одной в строке\nhttps://docs.docker.com\nhttps://hub.docker.com'
+                            'Ссылки к этой теме, по одной в строке\nhttps://docs.docker.com\nhttps://hub.docker.com'
                           }
                           className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'var(--tg-secondary)' }}
                         />
-                        <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
-                          Одно название + одна или несколько ссылок
+                        <p
+                          className="text-[11px]"
+                          style={{ color: 'var(--tg-hint)' }}
+                        >
+                          Одна тема — один элемент, внутри сколько угодно ссылок
                         </p>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             disabled={
-                              busy || !linkTitle.trim() || !linksText.trim()
+                              busy || !itemTitle.trim() || !urlsText.trim()
                             }
-                            onClick={() => void createLinks(section.id)}
+                            onClick={() => void createItem(section.id)}
                             className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                             style={{
                               background: '#65a30d',
@@ -436,9 +454,9 @@ export function StudyApp({ onBack }: StudyAppProps) {
                           <button
                             type="button"
                             onClick={() => {
-                              setAddingLinkFor(null);
-                              setLinkTitle('');
-                              setLinksText('');
+                              setAddingItemFor(null);
+                              setItemTitle('');
+                              setUrlsText('');
                             }}
                             className="rounded-xl px-3 py-2 text-sm"
                             style={{ background: 'var(--tg-secondary)' }}
@@ -453,7 +471,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
                         disabled={busy}
                         onClick={() => {
                           haptic('light');
-                          setAddingLinkFor(section.id);
+                          setAddingItemFor(section.id);
                           setOpenSectionId(section.id);
                         }}
                         className="w-full rounded-2xl px-3 py-2.5 text-sm font-semibold"
@@ -463,7 +481,7 @@ export function StudyApp({ onBack }: StudyAppProps) {
                           color: '#f7fee7',
                         }}
                       >
-                        + Ссылки
+                        + Тема
                       </button>
                     )}
                   </div>

@@ -25,7 +25,7 @@ model User {
   steamProfiles SteamProfile[]
   steamGames   SteamWishlistGame[]
   studySections StudySection[]
-  studyLinks    StudyLink[]
+  studyItems    StudyItem[]
 }
 
 model App {
@@ -234,24 +234,35 @@ model StudySection {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  links     StudyLink[]
+  items     StudyItem[]
 
   @@index([userId, sortOrder])
 }
 
-model StudyLink {
-  id        String       @id @default(cuid())
+model StudyItem {
+  id        String         @id @default(cuid())
   userId    BigInt
   sectionId String
   title     String
-  url       String
-  note      String       @default("")
-  sortOrder Int          @default(0)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  section   StudySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  note      String         @default("")
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section   StudySection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  urls      StudyItemUrl[]
 
   @@index([userId, sectionId])
   @@index([sectionId, sortOrder])
+}
+
+model StudyItemUrl {
+  id        String    @id @default(cuid())
+  itemId    String
+  url       String
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  item      StudyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, sortOrder])
 }

@@ -7,7 +7,6 @@ import {
   IsString,
   MaxLength,
   MinLength,
-  ValidateNested,
 } from 'class-validator';
 
 export class StudyInitDto {
@@ -40,66 +39,33 @@ export class StudyDeleteSectionDto extends StudyInitDto {
   sectionId!: string;
 }
 
-export class StudyLinkItemDto {
+export class StudyCreateItemDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  sectionId!: string;
+
   @IsString()
   @MinLength(1)
   @MaxLength(120)
   title!: string;
 
-  @IsString()
-  @MinLength(3)
-  @MaxLength(2000)
-  url!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  note?: string;
-}
-
-export class StudyCreateLinksDto extends StudyInitDto {
-  @IsString()
-  @MinLength(1)
-  sectionId!: string;
-
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(50)
-  @ValidateNested({ each: true })
-  @Type(() => StudyLinkItemDto)
-  links!: StudyLinkItemDto[];
-}
-
-export class StudyUpdateLinkDto extends StudyInitDto {
-  @IsString()
-  @MinLength(1)
-  linkId!: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  title?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(3)
-  @MaxLength(2000)
-  url?: string;
+  @IsString({ each: true })
+  @MinLength(3, { each: true })
+  @MaxLength(2000, { each: true })
+  @Type(() => String)
+  urls!: string[];
 
   @IsOptional()
   @IsString()
   @MaxLength(300)
   note?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  sectionId?: string;
 }
 
-export class StudyDeleteLinkDto extends StudyInitDto {
+export class StudyDeleteItemDto extends StudyInitDto {
   @IsString()
   @MinLength(1)
-  linkId!: string;
+  itemId!: string;
 }
