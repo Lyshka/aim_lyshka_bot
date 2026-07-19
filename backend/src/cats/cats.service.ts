@@ -64,7 +64,7 @@ export class CatsService {
         },
       },
     });
-    if (existing) {
+    if (existing && !this.isUnstableCatUrl(existing.imageUrl, existing.imageKey)) {
       return existing;
     }
 
@@ -72,7 +72,11 @@ export class CatsService {
       where: { userId: uid },
       select: { imageKey: true, textKey: true },
     });
-    const imageKeys = new Set(usedImages.map((i) => i.imageKey));
+    const imageKeys = new Set(
+      usedImages
+        .map((i) => i.imageKey)
+        .filter((key) => key !== existing?.imageKey),
+    );
     const textKeys = new Set(usedImages.map((i) => i.textKey));
 
     const user = await this.prisma.user.findUnique({
@@ -90,7 +94,19 @@ export class CatsService {
       ...contentCtx,
       excludeKeys: imageKeys,
     });
-    const cute = await inventUniqueText(contentCtx, textKeys);
+    const cute = existing
+      ? { text: existing.text, textKey: existing.textKey }
+      : await inventUniqueText(contentCtx, textKeys);
+
+    if (existing) {
+      return this.prisma.catPost.update({
+        where: { id: existing.id },
+        data: {
+          imageUrl: image.url,
+          imageKey: image.id,
+        },
+      });
+    }
 
     try {
       return await this.prisma.catPost.create({
@@ -117,6 +133,14 @@ export class CatsService {
       }
       throw new Error('Не удалось создать котика дня');
     }
+  }
+
+  private isUnstableCatUrl(imageUrl: string, imageKey: string) {
+    return (
+      imageKey.startsWith('fallback-') ||
+      /[?&]seed=/i.test(imageUrl) ||
+      /cataas\.com\/cat\/gif(\?|$)/i.test(imageUrl)
+    );
   }
 
   private async getUserSettings(userId: number) {
@@ -224,7 +248,7 @@ export class CatsService {
 
         const post = await this.ensureTodayPost(userId, timeZone);
 
-        await this.botService.sendPhoto(
+        await this.botService.sendCatMedia(
           userId,
           post.imageUrl,
           post.text,

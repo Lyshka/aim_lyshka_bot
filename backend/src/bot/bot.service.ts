@@ -128,4 +128,39 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       ...extra,
     });
   }
+
+  async sendAnimation(
+    chatId: number,
+    animation: string,
+    caption?: string,
+    extra?: Parameters<Telegraf['telegram']['sendAnimation']>[2],
+  ) {
+    return this.bot.telegram.sendAnimation(chatId, animation, {
+      caption,
+      ...extra,
+    });
+  }
+
+  async sendCatMedia(
+    chatId: number,
+    mediaUrl: string,
+    caption?: string,
+    extra?: Parameters<Telegraf['telegram']['sendPhoto']>[2],
+  ) {
+    const animated =
+      /\.gif(\?|$)/i.test(mediaUrl) ||
+      /cataas\.com\/cat\//i.test(mediaUrl) ||
+      /mime_types=gif/i.test(mediaUrl) ||
+      /\/gif(\?|$)/i.test(mediaUrl);
+
+    if (animated) {
+      try {
+        return await this.sendAnimation(chatId, mediaUrl, caption, extra);
+      } catch {
+        //
+      }
+    }
+
+    return this.sendPhoto(chatId, mediaUrl, caption, extra);
+  }
 }
