@@ -5,6 +5,7 @@ export type AppBackgroundVariant =
   | 'cats'
   | 'games'
   | 'stats'
+  | 'study'
   | 'admin';
 
 type AppBackgroundProps = {
@@ -26,6 +27,7 @@ export function AppBackground({ variant }: AppBackgroundProps) {
       {variant === 'cats' ? <div className="app-orb app-orb-cats" aria-hidden /> : null}
       {variant === 'games' ? <div className="app-orb app-orb-games" aria-hidden /> : null}
       {variant === 'stats' ? <div className="app-orb app-orb-stats" aria-hidden /> : null}
+      {variant === 'study' ? <div className="app-orb app-orb-study" aria-hidden /> : null}
     </>
   );
 }

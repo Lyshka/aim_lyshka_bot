@@ -54,6 +54,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'study',
+    name: 'Учеба',
+    description: 'Разделы и полезные ссылки',
+    icon: 'study',
+    color: '#65a30d',
+    sortOrder: 60,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

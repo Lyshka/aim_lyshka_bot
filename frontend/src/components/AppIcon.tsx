@@ -138,6 +138,33 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
+  if (slug === 'study') {
+    return (
+      <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+        <path
+          d="M10 14.5c0-1.4 1.1-2.5 2.5-2.5H23v24.5H12.5A2.5 2.5 0 0 1 10 34V14.5Z"
+          fill="currentColor"
+        />
+        <path
+          d="M38 14.5c0-1.4-1.1-2.5-2.5-2.5H25v24.5h10.5a2.5 2.5 0 0 0 2.5-2.5V14.5Z"
+          fill="currentColor"
+          opacity="0.75"
+        />
+        <path
+          d="M23 12h2v24.5h-2V12Z"
+          fill="#fff"
+          opacity="0.35"
+        />
+        <path
+          d="M15 18h5M15 22.5h5M28 18h5M28 22.5h5"
+          stroke="#fff"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
       <rect x="10" y="10" width="28" height="28" rx="8" fill="currentColor" />
@@ -192,6 +219,13 @@ export function appAccent(slug: string, fallback: string) {
       from: '#22d3ee',
       to: '#0e7490',
       glow: 'rgba(14, 116, 144, 0.4)',
+    };
+  }
+  if (slug === 'study') {
+    return {
+      from: '#84cc16',
+      to: '#3f6212',
+      glow: 'rgba(101, 163, 13, 0.4)',
     };
   }
   return {

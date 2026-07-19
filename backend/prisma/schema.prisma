@@ -24,6 +24,8 @@ model User {
   catPosts     CatPost[]
   steamProfiles SteamProfile[]
   steamGames   SteamWishlistGame[]
+  studySections StudySection[]
+  studyLinks    StudyLink[]
 }
 
 model App {
@@ -222,4 +224,34 @@ model SteamMarketPrice {
   marketHashName String   @id
   priceUsd       Float?
   updatedAt      DateTime @updatedAt
+}
+
+model StudySection {
+  id        String      @id @default(cuid())
+  userId    BigInt
+  title     String
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links     StudyLink[]
+
+  @@index([userId, sortOrder])
+}
+
+model StudyLink {
+  id        String       @id @default(cuid())
+  userId    BigInt
+  sectionId String
+  title     String
+  url       String
+  note      String       @default("")
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section   StudySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sectionId])
+  @@index([sectionId, sortOrder])
 }

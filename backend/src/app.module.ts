@@ -12,6 +12,7 @@ import { MedsModule } from './meds/meds.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { StatsModule } from './stats/stats.module';
+import { StudyModule } from './study/study.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     GamesModule,
     StatsModule,
+    StudyModule,
     AdminModule,
     BotModule,
     RemindersModule,

@@ -418,6 +418,26 @@ export type StatsLookup = {
   };
 };
 
+export type StudyLink = {
+  id: string;
+  sectionId: string;
+  title: string;
+  url: string;
+  note: string;
+  sortOrder: number;
+};
+
+export type StudySection = {
+  id: string;
+  title: string;
+  sortOrder: number;
+  links: StudyLink[];
+};
+
+export type StudyOverview = {
+  sections: StudySection[];
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -494,6 +514,61 @@ export const api = {
     request<StatsLookup>('/api/stats/lookup', {
       method: 'POST',
       body: JSON.stringify({ initData, steamInput }),
+    }),
+  studyOverview: (initData: string) =>
+    request<StudyOverview>('/api/study/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  studyCreateSection: (initData: string, title: string) =>
+    request<StudyOverview>('/api/study/sections/create', {
+      method: 'POST',
+      body: JSON.stringify({ initData, title }),
+    }),
+  studyUpdateSection: (
+    initData: string,
+    data: { sectionId: string; title: string },
+  ) =>
+    request<StudyOverview>('/api/study/sections/update', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  studyDeleteSection: (initData: string, sectionId: string) =>
+    request<StudyOverview>('/api/study/sections/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, sectionId }),
+    }),
+  studyCreateLink: (
+    initData: string,
+    data: {
+      sectionId: string;
+      title: string;
+      url: string;
+      note?: string;
+    },
+  ) =>
+    request<StudyOverview>('/api/study/links/create', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  studyUpdateLink: (
+    initData: string,
+    data: {
+      linkId: string;
+      title?: string;
+      url?: string;
+      note?: string;
+      sectionId?: string;
+    },
+  ) =>
+    request<StudyOverview>('/api/study/links/update', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  studyDeleteLink: (initData: string, linkId: string) =>
+    request<StudyOverview>('/api/study/links/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, linkId }),
     }),
   healthManual: (
     initData: string,

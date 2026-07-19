@@ -76,6 +76,9 @@ export class AuthService {
       await this.appsService
         .setGrant(userId, 'stats', true)
         .catch(() => undefined);
+      await this.appsService
+        .setGrant(userId, 'study', true)
+        .catch(() => undefined);
     }
 
     const apps = await this.appsService.listForUser(userId);
