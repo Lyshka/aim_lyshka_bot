@@ -115,7 +115,7 @@ export function StatsApp({ onBack }: StatsAppProps) {
   }
 
   const leetify = data?.leetify?.available ? data.leetify : null;
-  const faceit = data?.faceit;
+  const faceit = data?.faceit ?? null;
 
   const visibleTabs = useMemo(() => {
     if (!data) {
@@ -468,7 +468,7 @@ function OverviewTab({
 function LeetifyTab({
   leetify,
 }: {
-  leetify: NonNullable<StatsLookup['leetify']> & { available: true };
+  leetify: NonNullable<StatsLookup['leetify']>;
 }) {
   return (
     <div className="mt-4 space-y-4">
@@ -610,7 +610,7 @@ function FaceitTab({
   faceit,
 }: {
   data: StatsLookup;
-  faceit: StatsLookup['faceit'];
+  faceit: StatsLookup['faceit'] | null;
 }) {
   if (!faceit) {
     return (
@@ -742,7 +742,7 @@ function MatchesTab({
   faceit,
 }: {
   leetify: StatsLookup['leetify'] | null;
-  faceit: StatsLookup['faceit'];
+  faceit: StatsLookup['faceit'] | null;
 }) {
   const leetifyMatches = leetify?.recentMatches ?? [];
   const faceitMatches = faceit?.recentMatches ?? [];
