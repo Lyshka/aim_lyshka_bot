@@ -257,6 +257,11 @@ export type StatsLookup = {
   steam: {
     personaName: string;
     avatarUrl: string;
+    countryCode: string | null;
+    createdAt: string | null;
+    accountAgeDays: number | null;
+    profileVisible: boolean;
+    steamLevel: number | null;
     bans: {
       vacBanned: boolean;
       communityBanned: boolean;
@@ -289,8 +294,32 @@ export type StatsLookup = {
       renown: number | null;
       competitive: { map: string; rank: number; rankName: string }[];
     };
-    rating?: Record<string, number | null>;
-    stats?: Record<string, number | null>;
+    rating?: {
+      aim?: number | null;
+      positioning?: number | null;
+      utility?: number | null;
+      clutch?: number | null;
+      opening?: number | null;
+      ctLeetify?: number | null;
+      tLeetify?: number | null;
+    };
+    stats?: {
+      headshotAccuracy?: number | null;
+      spottedAccuracy?: number | null;
+      sprayAccuracy?: number | null;
+      reactionMs?: number | null;
+      preaim?: number | null;
+      counterStrafe?: number | null;
+      flashPerFlashbang?: number | null;
+      heDamageAvg?: number | null;
+      tradeKillSuccess?: number | null;
+      openingDuelCt?: number | null;
+      openingDuelT?: number | null;
+      kd?: number | null;
+      adr?: number | null;
+      kast?: number | null;
+      dpr?: number | null;
+    };
     recentMatches?: {
       id: string;
       finishedAt: string | null;
@@ -316,14 +345,44 @@ export type StatsLookup = {
       elo: number | null;
       region: string | null;
       name: string | null;
-      stats: Record<string, unknown> | null;
+      stats: {
+        matches?: string | number | null;
+        winRate?: string | number | null;
+        avgKd?: string | number | null;
+        avgKr?: string | number | null;
+        headshots?: string | number | null;
+        wins?: string | number | null;
+        currentWinStreak?: string | number | null;
+        longestWinStreak?: string | number | null;
+        maps?: {
+          label: string;
+          matches: string | number | null;
+          winRate: string | number | null;
+          avgKd: string | number | null;
+        }[];
+      } | null;
     } | null;
     csgo: {
       level: number | null;
       elo: number | null;
       region: string | null;
       name: string | null;
-      stats: Record<string, unknown> | null;
+      stats: {
+        matches?: string | number | null;
+        winRate?: string | number | null;
+        avgKd?: string | number | null;
+        avgKr?: string | number | null;
+        headshots?: string | number | null;
+        wins?: string | number | null;
+        currentWinStreak?: string | number | null;
+        longestWinStreak?: string | number | null;
+        maps?: {
+          label: string;
+          matches: string | number | null;
+          winRate: string | number | null;
+          avgKd: string | number | null;
+        }[];
+      } | null;
     } | null;
     bans: {
       reason: string;
@@ -343,6 +402,14 @@ export type StatsLookup = {
       score: Record<string, number> | null;
     }[];
   } | null;
+  trackers: {
+    cs2tracker: string;
+    csstats: string;
+    csst: string;
+    csrep: string;
+    leetify: string;
+    faceit: string | null;
+  };
   sources: {
     steam: boolean;
     leetify: boolean;

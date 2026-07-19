@@ -88,6 +88,14 @@ export class StatsService {
       steam,
       leetify,
       faceit,
+      trackers: {
+        cs2tracker: `https://cs2tracker.gg/stats/${steamId}`,
+        csstats: `https://csstats.gg/player/${steamId}`,
+        csst: `https://csst.at/profile/${steamId}`,
+        csrep: `https://csrep.gg/player/${steamId}`,
+        leetify: `https://leetify.com/app/profile/${steamId}`,
+        faceit: faceit?.profileUrl ?? null,
+      },
       sources: {
         steam: Boolean(steam),
         leetify: Boolean(leetify),
@@ -99,17 +107,104 @@ export class StatsService {
 
   private async fetchSteamBundle(steamId: string, apiKey: string) {
     try {
-      const [summary, bans, playtime] = await Promise.all([
-        fetchPlayerSummary(steamId, apiKey),
+      const [summary, bans, playtime, steamLevel] = await Promise.all([
+        this.fetchSteamSummary(steamId, apiKey),
         this.fetchSteamBans(steamId, apiKey),
         this.fetchCs2Playtime(steamId, apiKey),
+        this.fetchSteamLevel(steamId, apiKey),
       ]);
       return {
         personaName: summary.personaName,
         avatarUrl: summary.avatarUrl,
+        countryCode: summary.countryCode,
+        createdAt: summary.createdAt,
+        accountAgeDays: summary.accountAgeDays,
+        profileVisible: summary.profileVisible,
+        steamLevel,
         bans,
         cs2: playtime,
       };
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchSteamSummary(steamId: string, apiKey: string) {
+    try {
+      const response = await fetch(
+        `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${encodeURIComponent(apiKey)}&steamids=${encodeURIComponent(steamId)}`,
+      );
+      if (!response.ok) {
+        const fallback = await fetchPlayerSummary(steamId, apiKey);
+        return {
+          personaName: fallback.personaName,
+          avatarUrl: fallback.avatarUrl,
+          countryCode: null as string | null,
+          createdAt: null as string | null,
+          accountAgeDays: null as number | null,
+          profileVisible: true,
+        };
+      }
+      const data = (await response.json()) as {
+        response?: {
+          players?: {
+            personaname?: string;
+            avatarfull?: string;
+            avatarmedium?: string;
+            avatar?: string;
+            loccountrycode?: string;
+            timecreated?: number;
+            communityvisibilitystate?: number;
+          }[];
+        };
+      };
+      const player = data.response?.players?.[0];
+      const createdAt =
+        player?.timecreated && player.timecreated > 0
+          ? new Date(player.timecreated * 1000).toISOString()
+          : null;
+      const accountAgeDays =
+        player?.timecreated && player.timecreated > 0
+          ? Math.floor((Date.now() / 1000 - player.timecreated) / 86400)
+          : null;
+      return {
+        personaName: player?.personaname?.trim() || steamId,
+        avatarUrl:
+          player?.avatarfull ||
+          player?.avatarmedium ||
+          player?.avatar ||
+          '',
+        countryCode: player?.loccountrycode?.toUpperCase() || null,
+        createdAt,
+        accountAgeDays,
+        profileVisible: (player?.communityvisibilitystate ?? 3) === 3,
+      };
+    } catch {
+      const fallback = await fetchPlayerSummary(steamId, apiKey);
+      return {
+        personaName: fallback.personaName,
+        avatarUrl: fallback.avatarUrl,
+        countryCode: null as string | null,
+        createdAt: null as string | null,
+        accountAgeDays: null as number | null,
+        profileVisible: true,
+      };
+    }
+  }
+
+  private async fetchSteamLevel(steamId: string, apiKey: string) {
+    try {
+      const response = await fetch(
+        `https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${encodeURIComponent(apiKey)}&steamid=${encodeURIComponent(steamId)}`,
+      );
+      if (!response.ok) {
+        return null;
+      }
+      const data = (await response.json()) as {
+        response?: { player_level?: number };
+      };
+      const level = data.response?.player_level;
+      return typeof level === 'number' ? level : null;
     } catch {
       return null;
     }
@@ -264,14 +359,33 @@ export class StatsService {
           sprayAccuracy: round(data.stats?.spray_accuracy, 1),
           reactionMs: round(data.stats?.reaction_time_ms, 0),
           preaim: round(data.stats?.preaim, 1),
-          counterStrafe: round(data.stats?.counter_strafing_good_shots_ratio, 1),
-          flashPerFlashbang: round(data.stats?.flashbang_hit_foe_per_flashbang, 2),
+          counterStrafe: round(
+            data.stats?.counter_strafing_good_shots_ratio,
+            1,
+          ),
+          flashPerFlashbang: round(
+            data.stats?.flashbang_hit_foe_per_flashbang,
+            2,
+          ),
           heDamageAvg: round(data.stats?.he_foes_damage_avg, 1),
-          tradeKillSuccess: round(data.stats?.trade_kills_success_percentage, 1),
-          openingDuelCt: round(data.stats?.ct_opening_duel_success_percentage, 1),
-          openingDuelT: round(data.stats?.t_opening_duel_success_percentage, 1),
+          tradeKillSuccess: round(
+            data.stats?.trade_kills_success_percentage,
+            1,
+          ),
+          openingDuelCt: round(
+            data.stats?.ct_opening_duel_success_percentage,
+            1,
+          ),
+          openingDuelT: round(
+            data.stats?.t_opening_duel_success_percentage,
+            1,
+          ),
+          kd: round(data.stats?.kd, 2),
+          adr: round(data.stats?.adr, 1),
+          kast: round(data.stats?.kast, 1),
+          dpr: round(data.stats?.dpr, 2),
         },
-        recentMatches: (data.recent_matches ?? []).slice(0, 15).map((match) => ({
+        recentMatches: (data.recent_matches ?? []).slice(0, 20).map((match) => ({
           id: match.id ?? '',
           finishedAt: match.finished_at ?? null,
           source: match.data_source ?? '',

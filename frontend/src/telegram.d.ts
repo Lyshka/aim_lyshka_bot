@@ -14,6 +14,7 @@ declare global {
             username?: string;
           };
         };
+        openLink?: (url: string) => void;
       };
     };
   }
