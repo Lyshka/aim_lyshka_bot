@@ -64,6 +64,21 @@ export class StudyCreateItemDto extends StudyInitDto {
   note?: string;
 }
 
+export class StudyAddUrlsDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  itemId!: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @MinLength(3, { each: true })
+  @MaxLength(2000, { each: true })
+  @Type(() => String)
+  urls!: string[];
+}
+
 export class StudyDeleteItemDto extends StudyInitDto {
   @IsString()
   @MinLength(1)

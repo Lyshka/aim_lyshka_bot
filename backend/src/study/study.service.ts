@@ -312,6 +312,50 @@ export class StudyService {
     return this.overview(userId);
   }
 
+  async addUrls(
+    userId: number,
+    data: { itemId: string; urls: string[] },
+  ) {
+    const item = await this.prisma.studyItem.findFirst({
+      where: { id: data.itemId, userId, deletedAt: null },
+      include: {
+        urls: {
+          where: { deletedAt: null },
+          orderBy: { sortOrder: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!item) {
+      throw new NotFoundException('Тема не найдена');
+    }
+
+    const urls = prepareUrls(data.urls);
+    const existing = await this.prisma.studyItemUrl.findMany({
+      where: { itemId: item.id, deletedAt: null },
+      select: { url: true },
+    });
+    const existingSet = new Set(existing.map((entry) => entry.url));
+    const fresh = urls.filter((url) => !existingSet.has(url));
+    if (fresh.length === 0) {
+      throw new BadRequestException('Эти ссылки уже есть в теме');
+    }
+
+    let sortOrder = item.urls[0]?.sortOrder ?? -1;
+    await this.prisma.studyItemUrl.createMany({
+      data: fresh.map((url) => {
+        sortOrder += 1;
+        return {
+          itemId: item.id,
+          url,
+          sortOrder,
+        };
+      }),
+    });
+
+    return this.overview(userId);
+  }
+
   async deleteItem(userId: number, itemId: string) {
     const item = await this.prisma.studyItem.findFirst({
       where: { id: itemId, userId, deletedAt: null },

@@ -93,8 +93,10 @@ export function LinksApp({ onBack }: LinksAppProps) {
   const [sectionTitle, setSectionTitle] = useState('');
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
+  const [addingUrlsTo, setAddingUrlsTo] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState('');
   const [urlsText, setUrlsText] = useState('');
+  const [extraUrlsText, setExtraUrlsText] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -219,9 +221,26 @@ export function LinksApp({ onBack }: LinksAppProps) {
     );
   }
 
+  async function addUrlsToItem(itemId: string) {
+    const urls = parseUrlLines(extraUrlsText);
+    if (urls.length === 0) {
+      setError('Добавь хотя бы одну ссылку');
+      return;
+    }
+    haptic('medium');
+    setExtraUrlsText('');
+    setAddingUrlsTo(null);
+    await runOverview(() =>
+      api.studyAddUrls(initData, { itemId, urls }),
+    );
+  }
+
   async function removeItem(item: StudyItem) {
     haptic('heavy');
     await runOverview(() => api.studyDeleteItem(initData, item.id));
+    if (addingUrlsTo === item.id) {
+      setAddingUrlsTo(null);
+    }
   }
 
   async function removeUrl(entry: StudyItemUrl) {
@@ -285,10 +304,14 @@ export function LinksApp({ onBack }: LinksAppProps) {
           setOpenSectionId={setOpenSectionId}
           addingItemFor={addingItemFor}
           setAddingItemFor={setAddingItemFor}
+          addingUrlsTo={addingUrlsTo}
+          setAddingUrlsTo={setAddingUrlsTo}
           itemTitle={itemTitle}
           setItemTitle={setItemTitle}
           urlsText={urlsText}
           setUrlsText={setUrlsText}
+          extraUrlsText={extraUrlsText}
+          setExtraUrlsText={setExtraUrlsText}
           renamingId={renamingId}
           setRenamingId={setRenamingId}
           renameValue={renameValue}
@@ -298,6 +321,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
           onRenameSection={(section) => void renameSection(section)}
           onRemoveSection={(section) => void removeSection(section)}
           onCreateItem={(sectionId) => void createItem(sectionId)}
+          onAddUrls={(itemId) => void addUrlsToItem(itemId)}
           onRemoveItem={(item) => void removeItem(item)}
           onRemoveUrl={(entry) => void removeUrl(entry)}
         />
@@ -346,10 +370,14 @@ function ListTab({
   setOpenSectionId,
   addingItemFor,
   setAddingItemFor,
+  addingUrlsTo,
+  setAddingUrlsTo,
   itemTitle,
   setItemTitle,
   urlsText,
   setUrlsText,
+  extraUrlsText,
+  setExtraUrlsText,
   renamingId,
   setRenamingId,
   renameValue,
@@ -359,6 +387,7 @@ function ListTab({
   onRenameSection,
   onRemoveSection,
   onCreateItem,
+  onAddUrls,
   onRemoveItem,
   onRemoveUrl,
 }: {
@@ -370,10 +399,14 @@ function ListTab({
   setOpenSectionId: (value: string | null) => void;
   addingItemFor: string | null;
   setAddingItemFor: (value: string | null) => void;
+  addingUrlsTo: string | null;
+  setAddingUrlsTo: (value: string | null) => void;
   itemTitle: string;
   setItemTitle: (value: string) => void;
   urlsText: string;
   setUrlsText: (value: string) => void;
+  extraUrlsText: string;
+  setExtraUrlsText: (value: string) => void;
   renamingId: string | null;
   setRenamingId: (value: string | null) => void;
   renameValue: string;
@@ -383,6 +416,7 @@ function ListTab({
   onRenameSection: (section: StudySection) => void;
   onRemoveSection: (section: StudySection) => void;
   onCreateItem: (sectionId: string) => void;
+  onAddUrls: (itemId: string) => void;
   onRemoveItem: (item: StudyItem) => void;
   onRemoveUrl: (entry: StudyItemUrl) => void;
 }) {
@@ -460,7 +494,6 @@ function ListTab({
                     </p>
                     <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
                       {section.items.length} тем
-                      {open ? ' · скрыть' : ' · открыть'}
                     </p>
                   </button>
                   <button
@@ -609,6 +642,66 @@ function ListTab({
                               </div>
                             ))}
                           </div>
+
+                          {addingUrlsTo === item.id ? (
+                            <div className="mt-2 space-y-2">
+                              <textarea
+                                value={extraUrlsText}
+                                onChange={(e) =>
+                                  setExtraUrlsText(e.target.value)
+                                }
+                                rows={3}
+                                placeholder={
+                                  'Новые ссылки, по одной в строке\nhttps://example.com'
+                                }
+                                className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                style={{ background: 'var(--tg-secondary)' }}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  disabled={busy || !extraUrlsText.trim()}
+                                  onClick={() => onAddUrls(item.id)}
+                                  className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                                  style={{
+                                    background: '#65a30d',
+                                    color: '#f7fee7',
+                                  }}
+                                >
+                                  Добавить
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAddingUrlsTo(null);
+                                    setExtraUrlsText('');
+                                  }}
+                                  className="rounded-xl px-3 py-2 text-sm"
+                                  style={{ background: 'var(--tg-secondary)' }}
+                                >
+                                  Отмена
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => {
+                                haptic('light');
+                                setAddingUrlsTo(item.id);
+                                setAddingItemFor(null);
+                                setExtraUrlsText('');
+                              }}
+                              className="mt-2 w-full rounded-xl px-3 py-2 text-xs font-semibold"
+                              style={{
+                                background: 'var(--tg-secondary)',
+                                color: '#3f6212',
+                              }}
+                            >
+                              + Ссылки
+                            </button>
+                          )}
                         </article>
                       ))
                     )}
@@ -678,6 +771,8 @@ function ListTab({
                           haptic('light');
                           setAddingItemFor(section.id);
                           setOpenSectionId(section.id);
+                          setAddingUrlsTo(null);
+                          setExtraUrlsText('');
                         }}
                         className="w-full rounded-2xl px-3 py-2.5 text-sm font-semibold"
                         style={{
@@ -751,12 +846,7 @@ function TrashTab({
           background: 'color-mix(in srgb, white 72%, #65a30d)',
         }}
       >
-        <div>
-          <p className="text-sm font-semibold">{trashCount} в корзине</p>
-          <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
-            Восстановление вернёт элемент на место
-          </p>
-        </div>
+        <p className="text-sm font-semibold">{trashCount} в корзине</p>
         <button
           type="button"
           disabled={busy}

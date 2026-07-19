@@ -589,6 +589,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
+  studyAddUrls: (
+    initData: string,
+    data: { itemId: string; urls: string[] },
+  ) =>
+    request<StudyOverview>('/api/study/items/add-urls', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
   studyDeleteItem: (initData: string, itemId: string) =>
     request<StudyOverview>('/api/study/items/delete', {
       method: 'POST',
