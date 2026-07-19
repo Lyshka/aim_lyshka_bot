@@ -194,4 +194,25 @@ export class StudyService {
     await this.prisma.studyItem.delete({ where: { id: item.id } });
     return this.overview(userId);
   }
+
+  async deleteUrl(userId: number, urlId: string) {
+    const entry = await this.prisma.studyItemUrl.findFirst({
+      where: { id: urlId },
+      include: { item: true },
+    });
+    if (!entry || Number(entry.item.userId) !== userId) {
+      throw new NotFoundException('Ссылка не найдена');
+    }
+
+    await this.prisma.studyItemUrl.delete({ where: { id: entry.id } });
+
+    const remaining = await this.prisma.studyItemUrl.count({
+      where: { itemId: entry.itemId },
+    });
+    if (remaining === 0) {
+      await this.prisma.studyItem.delete({ where: { id: entry.itemId } });
+    }
+
+    return this.overview(userId);
+  }
 }

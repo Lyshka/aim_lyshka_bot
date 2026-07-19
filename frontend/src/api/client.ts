@@ -562,6 +562,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, itemId }),
     }),
+  studyDeleteUrl: (initData: string, urlId: string) =>
+    request<StudyOverview>('/api/study/urls/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, urlId }),
+    }),
   healthManual: (
     initData: string,
     data: {

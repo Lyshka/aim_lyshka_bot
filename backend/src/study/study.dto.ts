@@ -69,3 +69,9 @@ export class StudyDeleteItemDto extends StudyInitDto {
   @MinLength(1)
   itemId!: string;
 }
+
+export class StudyDeleteUrlDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  urlId!: string;
+}

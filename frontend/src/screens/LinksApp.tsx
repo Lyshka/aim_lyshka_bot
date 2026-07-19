@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   api,
   type StudyItem,
+  type StudyItemUrl,
   type StudyOverview,
   type StudySection,
 } from '../api/client';
@@ -161,6 +162,11 @@ export function LinksApp({ onBack }: LinksAppProps) {
   async function removeItem(item: StudyItem) {
     haptic('heavy');
     await run(() => api.studyDeleteItem(initData, item.id));
+  }
+
+  async function removeUrl(entry: StudyItemUrl) {
+    haptic('heavy');
+    await run(() => api.studyDeleteUrl(initData, entry.id));
   }
 
   return (
@@ -382,26 +388,43 @@ export function LinksApp({ onBack }: LinksAppProps) {
                                 color: '#9f1239',
                               }}
                             >
-                              Удалить
+                              Удалить тему
                             </button>
                           </div>
                           <div className="mt-2 space-y-1.5">
                             {item.urls.map((entry) => (
-                              <button
+                              <div
                                 key={entry.id}
-                                type="button"
-                                className="block w-full truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
-                                style={{
-                                  background: 'var(--tg-secondary)',
-                                  color: '#3f6212',
-                                }}
-                                onClick={() => {
-                                  haptic('light');
-                                  openUrl(entry.url);
-                                }}
+                                className="flex items-center gap-1.5"
                               >
-                                {hostLabel(entry.url)}
-                              </button>
+                                <button
+                                  type="button"
+                                  className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
+                                  style={{
+                                    background: 'var(--tg-secondary)',
+                                    color: '#3f6212',
+                                  }}
+                                  onClick={() => {
+                                    haptic('light');
+                                    openUrl(entry.url);
+                                  }}
+                                >
+                                  {hostLabel(entry.url)}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void removeUrl(entry)}
+                                  className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
+                                  style={{
+                                    background:
+                                      'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
+                                    color: '#9f1239',
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
                             ))}
                           </div>
                         </article>

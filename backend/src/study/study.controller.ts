@@ -5,6 +5,7 @@ import {
   StudyCreateSectionDto,
   StudyDeleteItemDto,
   StudyDeleteSectionDto,
+  StudyDeleteUrlDto,
   StudyInitDto,
   StudyUpdateSectionDto,
 } from './study.dto';
@@ -78,5 +79,14 @@ export class StudyController {
       'links',
     );
     return this.studyService.deleteItem(session.user.id, dto.itemId);
+  }
+
+  @Post('urls/delete')
+  async deleteUrl(@Body() dto: StudyDeleteUrlDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'links',
+    );
+    return this.studyService.deleteUrl(session.user.id, dto.urlId);
   }
 }
