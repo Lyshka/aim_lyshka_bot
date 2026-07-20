@@ -18,26 +18,20 @@ function normalizeUrl(raw: string) {
   return `https://${trimmed}`;
 }
 
-function prepareUrls(rawUrls: string[]) {
-  const urls: string[] = [];
-  for (const raw of rawUrls) {
-    const url = normalizeUrl(raw);
-    if (!url) {
-      continue;
-    }
-    try {
-      new URL(url);
-    } catch {
-      throw new BadRequestException(`Некорректная ссылка: ${raw}`);
-    }
-    if (!urls.includes(url)) {
-      urls.push(url);
-    }
+type UrlEntry = { url: string; title: string | null };
+
+function prepareUrlEntry(rawUrl: string, rawTitle?: string | null): UrlEntry {
+  const url = normalizeUrl(rawUrl);
+  if (!url) {
+    throw new BadRequestException('Укажи ссылку');
   }
-  if (urls.length === 0) {
-    throw new BadRequestException('Добавь хотя бы одну ссылку');
+  try {
+    new URL(url);
+  } catch {
+    throw new BadRequestException(`Некорректная ссылка: ${rawUrl}`);
   }
-  return urls;
+  const title = rawTitle?.trim() ? rawTitle.trim().slice(0, 120) : null;
+  return { url, title };
 }
 
 function hostLabel(url: string) {
@@ -93,6 +87,7 @@ export class StudyService {
           urls: item.urls.map((entry) => ({
             id: entry.id,
             url: entry.url,
+            title: entry.title?.trim() || null,
             sortOrder: entry.sortOrder,
           })),
         })),
@@ -164,6 +159,7 @@ export class StudyService {
       urls: urls.map((entry) => ({
         id: entry.id,
         url: entry.url,
+        title: entry.title?.trim() || null,
         host: hostLabel(entry.url),
         itemTitle: entry.item.title,
         sectionTitle: entry.item.section.title,
@@ -269,7 +265,8 @@ export class StudyService {
     data: {
       sectionId: string;
       title: string;
-      urls: string[];
+      url?: string;
+      urlTitle?: string;
       note?: string;
     },
   ) {
@@ -285,7 +282,9 @@ export class StudyService {
       throw new BadRequestException('Нужно название');
     }
 
-    const urls = prepareUrls(data.urls);
+    const link = data.url?.trim()
+      ? prepareUrlEntry(data.url, data.urlTitle)
+      : null;
 
     const last = await this.prisma.studyItem.findFirst({
       where: { sectionId: section.id, userId, deletedAt: null },
@@ -300,21 +299,28 @@ export class StudyService {
         title,
         note: (data.note ?? '').trim(),
         sortOrder: (last?.sortOrder ?? -1) + 1,
-        urls: {
-          create: urls.map((url, index) => ({
-            url,
-            sortOrder: index,
-          })),
-        },
+        ...(link
+          ? {
+              urls: {
+                create: [
+                  {
+                    url: link.url,
+                    title: link.title,
+                    sortOrder: 0,
+                  },
+                ],
+              },
+            }
+          : {}),
       },
     });
 
     return this.overview(userId);
   }
 
-  async addUrls(
+  async addUrl(
     userId: number,
-    data: { itemId: string; urls: string[] },
+    data: { itemId: string; url: string; title?: string },
   ) {
     const item = await this.prisma.studyItem.findFirst({
       where: { id: data.itemId, userId, deletedAt: null },
@@ -330,27 +336,22 @@ export class StudyService {
       throw new NotFoundException('Тема не найдена');
     }
 
-    const urls = prepareUrls(data.urls);
-    const existing = await this.prisma.studyItemUrl.findMany({
-      where: { itemId: item.id, deletedAt: null },
-      select: { url: true },
+    const entry = prepareUrlEntry(data.url, data.title);
+    const existing = await this.prisma.studyItemUrl.findFirst({
+      where: { itemId: item.id, deletedAt: null, url: entry.url },
     });
-    const existingSet = new Set(existing.map((entry) => entry.url));
-    const fresh = urls.filter((url) => !existingSet.has(url));
-    if (fresh.length === 0) {
-      throw new BadRequestException('Эти ссылки уже есть в теме');
+    if (existing) {
+      throw new BadRequestException('Эта ссылка уже есть в теме');
     }
 
-    let sortOrder = item.urls[0]?.sortOrder ?? -1;
-    await this.prisma.studyItemUrl.createMany({
-      data: fresh.map((url) => {
-        sortOrder += 1;
-        return {
-          itemId: item.id,
-          url,
-          sortOrder,
-        };
-      }),
+    const sortOrder = (item.urls[0]?.sortOrder ?? -1) + 1;
+    await this.prisma.studyItemUrl.create({
+      data: {
+        itemId: item.id,
+        url: entry.url,
+        title: entry.title,
+        sortOrder,
+      },
     });
 
     return this.overview(userId);
@@ -397,21 +398,10 @@ export class StudyService {
       throw new NotFoundException('Ссылка не найдена');
     }
 
-    const deletedAt = new Date();
     await this.prisma.studyItemUrl.update({
       where: { id: entry.id },
-      data: { deletedAt },
+      data: { deletedAt: new Date() },
     });
-
-    const remaining = await this.prisma.studyItemUrl.count({
-      where: { itemId: entry.itemId, deletedAt: null },
-    });
-    if (remaining === 0) {
-      await this.prisma.studyItem.update({
-        where: { id: entry.itemId },
-        data: { deletedAt },
-      });
-    }
 
     return this.overview(userId);
   }

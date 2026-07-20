@@ -89,7 +89,8 @@ export class StudyController {
     return this.studyService.createItem(session.user.id, {
       sectionId: dto.sectionId,
       title: dto.title,
-      urls: dto.urls,
+      url: dto.url,
+      urlTitle: dto.urlTitle,
       note: dto.note,
     });
   }
@@ -100,9 +101,10 @@ export class StudyController {
       dto.initData ?? '',
       'links',
     );
-    return this.studyService.addUrls(session.user.id, {
+    return this.studyService.addUrl(session.user.id, {
       itemId: dto.itemId,
-      urls: dto.urls,
+      url: dto.url,
+      title: dto.title,
     });
   }
 

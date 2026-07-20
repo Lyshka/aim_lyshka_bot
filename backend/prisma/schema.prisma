@@ -265,6 +265,7 @@ model StudyItemUrl {
   id        String    @id @default(cuid())
   itemId    String
   url       String
+  title     String?
   sortOrder Int       @default(0)
   deletedAt DateTime?
   createdAt DateTime  @default(now())

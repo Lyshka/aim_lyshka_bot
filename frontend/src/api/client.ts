@@ -430,6 +430,7 @@ export type StatsLookup = {
 export type StudyItemUrl = {
   id: string;
   url: string;
+  title: string | null;
   sortOrder: number;
 };
 
@@ -473,6 +474,7 @@ export type StudyTrashItem = {
 export type StudyTrashUrl = {
   id: string;
   url: string;
+  title: string | null;
   host: string;
   itemTitle: string;
   sectionTitle: string;
@@ -590,7 +592,8 @@ export const api = {
     data: {
       sectionId: string;
       title: string;
-      urls: string[];
+      url?: string;
+      urlTitle?: string;
       note?: string;
     },
   ) =>
@@ -600,7 +603,7 @@ export const api = {
     }),
   studyAddUrls: (
     initData: string,
-    data: { itemId: string; urls: string[] },
+    data: { itemId: string; url: string; title?: string },
   ) =>
     request<StudyOverview>('/api/study/items/add-urls', {
       method: 'POST',

@@ -1,8 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
   IsOptional,
   IsString,
   MaxLength,
@@ -49,14 +46,15 @@ export class StudyCreateItemDto extends StudyInitDto {
   @MaxLength(120)
   title!: string;
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(50)
-  @IsString({ each: true })
-  @MinLength(3, { each: true })
-  @MaxLength(2000, { each: true })
-  @Type(() => String)
-  urls!: string[];
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  url?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  urlTitle?: string;
 
   @IsOptional()
   @IsString()
@@ -69,14 +67,15 @@ export class StudyAddUrlsDto extends StudyInitDto {
   @MinLength(1)
   itemId!: string;
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(50)
-  @IsString({ each: true })
-  @MinLength(3, { each: true })
-  @MaxLength(2000, { each: true })
-  @Type(() => String)
-  urls!: string[];
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  url!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  title?: string;
 }
 
 export class StudyDeleteItemDto extends StudyInitDto {

@@ -45,30 +45,12 @@ function normalizeUrl(raw: string) {
   return `https://${trimmed}`;
 }
 
-function parseUrlLines(text: string): string[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const urls: string[] = [];
-  for (const line of lines) {
-    const urlMatch =
-      line.match(/https?:\/\/\S+/i) ||
-      line.match(/(?:^|\s)?((?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)$/i);
-    const raw = (urlMatch?.[0] ?? line).trim();
-    const url = normalizeUrl(raw);
-    if (!url) {
-      continue;
-    }
-    try {
-      new URL(url);
-      if (!urls.includes(url)) {
-        urls.push(url);
-      }
-    } catch {}
+function linkLabel(entry: StudyItemUrl) {
+  const title = entry.title?.trim();
+  if (title) {
+    return title;
   }
-  return urls;
+  return hostLabel(entry.url);
 }
 
 function formatDeletedAt(value: string | null) {
@@ -95,8 +77,10 @@ export function LinksApp({ onBack }: LinksAppProps) {
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
   const [addingUrlsTo, setAddingUrlsTo] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState('');
-  const [urlsText, setUrlsText] = useState('');
-  const [extraUrlsText, setExtraUrlsText] = useState('');
+  const [itemUrl, setItemUrl] = useState('');
+  const [itemUrlTitle, setItemUrlTitle] = useState('');
+  const [extraUrl, setExtraUrl] = useState('');
+  const [extraUrlTitle, setExtraUrlTitle] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -203,35 +187,60 @@ export function LinksApp({ onBack }: LinksAppProps) {
 
   async function createItem(sectionId: string) {
     const title = itemTitle.trim();
-    const urls = parseUrlLines(urlsText);
     if (!title) {
       setError('Укажи название');
       return;
     }
-    if (urls.length === 0) {
-      setError('Добавь хотя бы одну ссылку');
-      return;
+    const url = itemUrl.trim();
+    if (url) {
+      try {
+        new URL(normalizeUrl(url));
+      } catch {
+        setError('Некорректная ссылка');
+        return;
+      }
     }
     haptic('medium');
     setItemTitle('');
-    setUrlsText('');
+    setItemUrl('');
+    setItemUrlTitle('');
     setAddingItemFor(null);
     await runOverview(() =>
-      api.studyCreateItem(initData, { sectionId, title, urls }),
+      api.studyCreateItem(initData, {
+        sectionId,
+        title,
+        ...(url
+          ? {
+              url,
+              urlTitle: itemUrlTitle.trim() || undefined,
+            }
+          : {}),
+      }),
     );
   }
 
   async function addUrlsToItem(itemId: string) {
-    const urls = parseUrlLines(extraUrlsText);
-    if (urls.length === 0) {
-      setError('Добавь хотя бы одну ссылку');
+    const url = extraUrl.trim();
+    if (!url) {
+      setError('Добавь ссылку');
+      return;
+    }
+    try {
+      new URL(normalizeUrl(url));
+    } catch {
+      setError('Некорректная ссылка');
       return;
     }
     haptic('medium');
-    setExtraUrlsText('');
+    setExtraUrl('');
+    setExtraUrlTitle('');
     setAddingUrlsTo(null);
     await runOverview(() =>
-      api.studyAddUrls(initData, { itemId, urls }),
+      api.studyAddUrls(initData, {
+        itemId,
+        url,
+        title: extraUrlTitle.trim() || undefined,
+      }),
     );
   }
 
@@ -308,10 +317,14 @@ export function LinksApp({ onBack }: LinksAppProps) {
           setAddingUrlsTo={setAddingUrlsTo}
           itemTitle={itemTitle}
           setItemTitle={setItemTitle}
-          urlsText={urlsText}
-          setUrlsText={setUrlsText}
-          extraUrlsText={extraUrlsText}
-          setExtraUrlsText={setExtraUrlsText}
+          itemUrl={itemUrl}
+          setItemUrl={setItemUrl}
+          itemUrlTitle={itemUrlTitle}
+          setItemUrlTitle={setItemUrlTitle}
+          extraUrl={extraUrl}
+          setExtraUrl={setExtraUrl}
+          extraUrlTitle={extraUrlTitle}
+          setExtraUrlTitle={setExtraUrlTitle}
           renamingId={renamingId}
           setRenamingId={setRenamingId}
           renameValue={renameValue}
@@ -374,10 +387,14 @@ function ListTab({
   setAddingUrlsTo,
   itemTitle,
   setItemTitle,
-  urlsText,
-  setUrlsText,
-  extraUrlsText,
-  setExtraUrlsText,
+  itemUrl,
+  setItemUrl,
+  itemUrlTitle,
+  setItemUrlTitle,
+  extraUrl,
+  setExtraUrl,
+  extraUrlTitle,
+  setExtraUrlTitle,
   renamingId,
   setRenamingId,
   renameValue,
@@ -403,10 +420,14 @@ function ListTab({
   setAddingUrlsTo: (value: string | null) => void;
   itemTitle: string;
   setItemTitle: (value: string) => void;
-  urlsText: string;
-  setUrlsText: (value: string) => void;
-  extraUrlsText: string;
-  setExtraUrlsText: (value: string) => void;
+  itemUrl: string;
+  setItemUrl: (value: string) => void;
+  itemUrlTitle: string;
+  setItemUrlTitle: (value: string) => void;
+  extraUrl: string;
+  setExtraUrl: (value: string) => void;
+  extraUrlTitle: string;
+  setExtraUrlTitle: (value: string) => void;
   renamingId: string | null;
   setRenamingId: (value: string | null) => void;
   renameValue: string;
@@ -607,60 +628,73 @@ function ListTab({
                             </button>
                           </div>
                           <div className="mt-2 space-y-1.5">
-                            {item.urls.map((entry) => (
-                              <div
-                                key={entry.id}
-                                className="flex items-center gap-1.5"
+                            {item.urls.length === 0 ? (
+                              <p
+                                className="text-xs"
+                                style={{ color: 'var(--tg-hint)' }}
                               >
-                                <button
-                                  type="button"
-                                  className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
-                                  style={{
-                                    background: 'var(--tg-secondary)',
-                                    color: '#3f6212',
-                                  }}
-                                  onClick={() => {
-                                    haptic('light');
-                                    openUrl(entry.url);
-                                  }}
+                                Ссылок пока нет
+                              </p>
+                            ) : (
+                              item.urls.map((entry) => (
+                                <div
+                                  key={entry.id}
+                                  className="flex items-center gap-1.5"
                                 >
-                                  {hostLabel(entry.url)}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() => onRemoveUrl(entry)}
-                                  className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
-                                  style={{
-                                    background:
-                                      'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
-                                    color: '#9f1239',
-                                  }}
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                                  <button
+                                    type="button"
+                                    className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
+                                    style={{
+                                      background: 'var(--tg-secondary)',
+                                      color: '#3f6212',
+                                    }}
+                                    onClick={() => {
+                                      haptic('light');
+                                      openUrl(entry.url);
+                                    }}
+                                  >
+                                    {linkLabel(entry)}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => onRemoveUrl(entry)}
+                                    className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
+                                    style={{
+                                      background:
+                                        'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
+                                      color: '#9f1239',
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))
+                            )}
                           </div>
 
                           {addingUrlsTo === item.id ? (
                             <div className="mt-2 space-y-2">
-                              <textarea
-                                value={extraUrlsText}
+                              <input
+                                value={extraUrl}
+                                onChange={(e) => setExtraUrl(e.target.value)}
+                                placeholder="https://example.com"
+                                className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                style={{ background: 'var(--tg-secondary)' }}
+                              />
+                              <input
+                                value={extraUrlTitle}
                                 onChange={(e) =>
-                                  setExtraUrlsText(e.target.value)
+                                  setExtraUrlTitle(e.target.value)
                                 }
-                                rows={3}
-                                placeholder={
-                                  'Новые ссылки, по одной в строке\nhttps://example.com'
-                                }
-                                className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                placeholder="Название ссылки (необязательно)"
+                                className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                                 style={{ background: 'var(--tg-secondary)' }}
                               />
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  disabled={busy || !extraUrlsText.trim()}
+                                  disabled={busy || !extraUrl.trim()}
                                   onClick={() => onAddUrls(item.id)}
                                   className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                                   style={{
@@ -674,7 +708,8 @@ function ListTab({
                                   type="button"
                                   onClick={() => {
                                     setAddingUrlsTo(null);
-                                    setExtraUrlsText('');
+                                    setExtraUrl('');
+                                    setExtraUrlTitle('');
                                   }}
                                   className="rounded-xl px-3 py-2 text-sm"
                                   style={{ background: 'var(--tg-secondary)' }}
@@ -691,7 +726,8 @@ function ListTab({
                                 haptic('light');
                                 setAddingUrlsTo(item.id);
                                 setAddingItemFor(null);
-                                setExtraUrlsText('');
+                                setExtraUrl('');
+                                setExtraUrlTitle('');
                               }}
                               className="mt-2 w-full rounded-xl px-3 py-2 text-xs font-semibold"
                               style={{
@@ -699,7 +735,7 @@ function ListTab({
                                 color: '#3f6212',
                               }}
                             >
-                              + Ссылки
+                              + Ссылка
                             </button>
                           )}
                         </article>
@@ -718,28 +754,24 @@ function ListTab({
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'var(--tg-secondary)' }}
                         />
-                        <textarea
-                          value={urlsText}
-                          onChange={(e) => setUrlsText(e.target.value)}
-                          rows={5}
-                          placeholder={
-                            'Ссылки к этой теме, по одной в строке\nhttps://docs.docker.com\nhttps://hub.docker.com'
-                          }
-                          className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                        <input
+                          value={itemUrl}
+                          onChange={(e) => setItemUrl(e.target.value)}
+                          placeholder="Ссылка (необязательно)"
+                          className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'var(--tg-secondary)' }}
                         />
-                        <p
-                          className="text-[11px]"
-                          style={{ color: 'var(--tg-hint)' }}
-                        >
-                          Одна тема — один элемент, внутри сколько угодно ссылок
-                        </p>
+                        <input
+                          value={itemUrlTitle}
+                          onChange={(e) => setItemUrlTitle(e.target.value)}
+                          placeholder="Название ссылки (необязательно)"
+                          className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                          style={{ background: 'var(--tg-secondary)' }}
+                        />
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            disabled={
-                              busy || !itemTitle.trim() || !urlsText.trim()
-                            }
+                            disabled={busy || !itemTitle.trim()}
                             onClick={() => onCreateItem(section.id)}
                             className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                             style={{
@@ -754,7 +786,8 @@ function ListTab({
                             onClick={() => {
                               setAddingItemFor(null);
                               setItemTitle('');
-                              setUrlsText('');
+                              setItemUrl('');
+                              setItemUrlTitle('');
                             }}
                             className="rounded-xl px-3 py-2 text-sm"
                             style={{ background: 'var(--tg-secondary)' }}
@@ -772,7 +805,8 @@ function ListTab({
                           setAddingItemFor(section.id);
                           setOpenSectionId(section.id);
                           setAddingUrlsTo(null);
-                          setExtraUrlsText('');
+                          setExtraUrl('');
+                          setExtraUrlTitle('');
                         }}
                         className="w-full rounded-2xl px-3 py-2.5 text-sm font-semibold"
                         style={{
@@ -903,7 +937,7 @@ function TrashTab({
           {trash.urls.map((entry) => (
             <TrashCard
               key={entry.id}
-              title={entry.host}
+              title={entry.title?.trim() || entry.host}
               meta={`${entry.itemTitle} · ${entry.sectionTitle} · ${formatDeletedAt(entry.deletedAt)}`}
               busy={busy}
               onRestore={() => {
