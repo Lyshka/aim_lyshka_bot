@@ -175,10 +175,19 @@ export type HealthOverview = {
   today: HealthDay | null;
   history: HealthDay[];
   ingestConfigured: boolean;
+  timeZone: string;
+  profile: {
+    birthDate: string | null;
+    age: number | null;
+    heightCm: number | null;
+    weightKg: number | null;
+  };
   stats: {
     daysTracked: number;
     lastWeightKg: number | null;
     lastSteps: number | null;
+    lastHeightCm: number | null;
+    lastSyncAt: string | null;
   };
 };
 

@@ -42,8 +42,7 @@ export class HealthController {
   @Post('ingest')
   async ingest(@Body() dto: HealthIngestDto) {
     this.healthService.assertIngestToken(dto.token);
-    await this.appsService.assertAccess(dto.userId, 'health');
-    return this.healthService.upsertDay(dto.userId, {
+    const row = await this.healthService.upsertDay(dto.userId, {
       day: dto.day,
       steps: dto.steps,
       weightKg: dto.weightKg,
@@ -56,7 +55,10 @@ export class HealthController {
       heightCm: dto.heightCm,
       walkingSpeedKmh: dto.walkingSpeedKmh,
       walkingStepLengthCm: dto.walkingStepLengthCm,
+      birthDate: dto.birthDate,
       source: dto.source?.trim() || 'apple_health',
     });
+    await this.appsService.setGrant(dto.userId, 'health', true);
+    return row;
   }
 }

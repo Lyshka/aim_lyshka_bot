@@ -66,6 +66,7 @@ model UserSettings {
   catsReminderChangedOn    String?
   catsLastDeliveryDate     String?
   timezone                 String    @default("Europe/Moscow")
+  birthDate                String?
   defaultInterval          Int       @default(1)
   notificationsMutedUntil  DateTime?
   createdAt                DateTime  @default(now())

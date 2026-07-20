@@ -21,6 +21,7 @@ type HealthPatch = {
   walkingSpeedKmh?: number;
   walkingStepLengthCm?: number;
   source?: string;
+  birthDate?: string;
 };
 
 function round2(value: number | null | undefined): number | null {
@@ -48,6 +49,27 @@ function pickInt(
     return Math.round(incoming);
   }
   return existing ?? null;
+}
+
+function normalizeBirthDate(raw?: string): string | null {
+  const value = raw?.trim();
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+function calcAge(birthDate: string, todayYmd: string): number | null {
+  const [ty, tm, td] = todayYmd.split('-').map(Number);
+  const [by, bm, bd] = birthDate.split('-').map(Number);
+  if (!ty || !by) {
+    return null;
+  }
+  let age = ty - by;
+  if (tm < bm || (tm === bm && td < bd)) {
+    age -= 1;
+  }
+  return age >= 0 && age <= 130 ? age : null;
 }
 
 function serializeDay(row: {
@@ -104,36 +126,63 @@ export class HealthService {
     }
   }
 
+  private async resolveTimeZone(userId: number) {
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId: BigInt(userId) },
+      select: { timezone: true },
+    });
+    return settings?.timezone?.trim() || 'Europe/Moscow';
+  }
+
   async overview(userId: number) {
-    const timeZone = 'Europe/Moscow';
+    const timeZone = await this.resolveTimeZone(userId);
     const today = formatYmd(new Date(), timeZone);
     const rows = await this.prisma.healthDay.findMany({
       where: { userId: BigInt(userId) },
       orderBy: { day: 'desc' },
-      take: 30,
+      take: 120,
+    });
+
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId: BigInt(userId) },
+      select: { birthDate: true },
     });
 
     const todayRow = rows.find((r) => r.day === today) ?? null;
     const withWeight = rows.filter((r) => r.weightKg != null);
     const withSteps = rows.filter((r) => r.steps != null);
+    const withHeight = rows.filter((r) => r.heightCm != null);
+    const birthDate = normalizeBirthDate(settings?.birthDate ?? undefined);
 
     return {
       today: todayRow ? serializeDay(todayRow) : null,
       history: rows.map(serializeDay),
       ingestConfigured: Boolean(this.ingestToken()),
+      timeZone,
+      profile: {
+        birthDate,
+        age: birthDate ? calcAge(birthDate, today) : null,
+        heightCm: round2(withHeight[0]?.heightCm ?? null),
+        weightKg: round2(withWeight[0]?.weightKg ?? null),
+      },
       stats: {
         daysTracked: rows.length,
         lastWeightKg: round2(withWeight[0]?.weightKg ?? null),
         lastSteps: withSteps[0]?.steps ?? null,
+        lastHeightCm: round2(withHeight[0]?.heightCm ?? null),
+        lastSyncAt: rows[0]?.updatedAt.toISOString() ?? null,
       },
     };
   }
 
   async upsertDay(userId: number, data: HealthPatch) {
-    const day = data.day?.trim() || formatYmd(new Date(), 'Europe/Moscow');
+    const timeZone = await this.resolveTimeZone(userId);
+    const day = data.day?.trim() || formatYmd(new Date(), timeZone);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
       throw new ForbiddenException('Некорректная дата');
     }
+
+    const birthDate = normalizeBirthDate(data.birthDate);
 
     const existingUser = await this.prisma.user.findUnique({
       where: { id: BigInt(userId) },
@@ -148,8 +197,20 @@ export class HealthService {
               reminderMinute: 0,
               defaultInterval: 1,
               timezone: 'Europe/Moscow',
+              birthDate,
             },
           },
+        },
+      });
+    } else if (birthDate) {
+      await this.prisma.userSettings.upsert({
+        where: { userId: BigInt(userId) },
+        create: {
+          userId: BigInt(userId),
+          birthDate,
+        },
+        update: {
+          birthDate,
         },
       });
     }

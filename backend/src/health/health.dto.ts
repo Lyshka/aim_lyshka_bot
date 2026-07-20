@@ -109,6 +109,10 @@ export class HealthIngestDto {
   @IsOptional()
   @IsString()
   source?: string;
+
+  @IsOptional()
+  @IsString()
+  birthDate?: string;
 }
 
 export class HealthManualDto extends HealthInitDto {
@@ -157,4 +161,8 @@ export class HealthManualDto extends HealthInitDto {
   @Max(200)
   @Type(() => Number)
   leanBodyMassKg?: number;
+
+  @IsOptional()
+  @IsString()
+  birthDate?: string;
 }
