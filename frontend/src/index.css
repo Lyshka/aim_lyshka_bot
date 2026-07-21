@@ -179,13 +179,6 @@ textarea.rounded-xl {
     var(--app-bg);
 }
 
-.app-bg-finance {
-  background:
-    radial-gradient(110% 75% at 100% 0%, rgba(245, 158, 11, 0.28), transparent 55%),
-    radial-gradient(90% 60% at 0% 100%, rgba(217, 119, 6, 0.16), transparent 50%),
-    var(--app-bg);
-}
-
 .app-orb {
   position: fixed;
   border-radius: 9999px;
@@ -246,15 +239,6 @@ textarea.rounded-xl {
   height: 210px;
   background: rgba(101, 163, 13, 0.18);
   animation: app-float 11s ease-in-out infinite reverse;
-}
-
-.app-orb-finance {
-  top: 14%;
-  right: -12%;
-  width: 210px;
-  height: 210px;
-  background: rgba(245, 158, 11, 0.2);
-  animation: app-float 10s ease-in-out infinite;
 }
 
 .app-grid {

@@ -54,15 +54,6 @@ const CATALOG = [
     isSystem: false,
   },
   {
-    slug: 'finance',
-    name: 'Финансы',
-    description: 'Счета, наличные и долги',
-    icon: 'finance',
-    color: '#b45309',
-    sortOrder: 55,
-    isSystem: false,
-  },
-  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',
@@ -127,6 +118,7 @@ export class AppsService implements OnModuleInit {
   async ensureCatalog() {
     await this.renameStudyAppToLinks();
     await this.deactivateHealthApp();
+    await this.deactivateFinanceApp();
 
     for (const item of CATALOG) {
       await this.prisma.app.upsert({
@@ -174,6 +166,18 @@ export class AppsService implements OnModuleInit {
   private async deactivateHealthApp() {
     await this.prisma.app.updateMany({
       where: { slug: 'health' },
+      data: { active: false },
+    });
+  }
+
+  private async deactivateFinanceApp() {
+    const app = await this.prisma.app.findUnique({ where: { slug: 'finance' } });
+    if (!app) {
+      return;
+    }
+    await this.prisma.userAppGrant.deleteMany({ where: { appId: app.id } });
+    await this.prisma.app.update({
+      where: { id: app.id },
       data: { active: false },
     });
   }

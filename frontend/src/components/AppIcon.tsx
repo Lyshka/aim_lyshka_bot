@@ -142,28 +142,6 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
-  if (slug === 'finance') {
-    return (
-      <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
-        <rect x="8" y="12" width="32" height="24" rx="4" fill="currentColor" />
-        <circle cx="24" cy="24" r="6" fill="#fff" opacity="0.92" />
-        <path
-          d="M24 20v8M20 24h8"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M14 18h6M28 18h6"
-          stroke="#fff"
-          strokeWidth="2"
-          strokeLinecap="round"
-          opacity="0.75"
-        />
-      </svg>
-    );
-  }
-
   return (
     <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
       <rect x="10" y="10" width="28" height="28" rx="8" fill="currentColor" />
@@ -218,13 +196,6 @@ export function appAccent(slug: string, fallback: string) {
       from: '#84cc16',
       to: '#3f6212',
       glow: 'rgba(101, 163, 13, 0.4)',
-    };
-  }
-  if (slug === 'finance') {
-    return {
-      from: '#fbbf24',
-      to: '#b45309',
-      glow: 'rgba(180, 83, 9, 0.4)',
     };
   }
   return {

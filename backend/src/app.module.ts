@@ -6,7 +6,6 @@ import { AppsModule } from './apps/apps.module';
 import { AuthModule } from './auth/auth.module';
 import { BotModule } from './bot/bot.module';
 import { CatsModule } from './cats/cats.module';
-import { FinanceModule } from './finance/finance.module';
 import { GamesModule } from './games/games.module';
 import { MedsModule } from './meds/meds.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -31,7 +30,6 @@ import { UsersModule } from './users/users.module';
     GamesModule,
     StatsModule,
     StudyModule,
-    FinanceModule,
     AdminModule,
     BotModule,
     RemindersModule,
