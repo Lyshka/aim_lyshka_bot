@@ -296,6 +296,50 @@ function collectProducts(node: unknown, output: AlphaFinanceProduct[]) {
   }
 }
 
+function parseIndividualProducts(
+  payload: unknown,
+  productType: string,
+): AlphaFinanceProduct[] {
+  const root = asRecord(payload);
+  if (!root) {
+    return [];
+  }
+  const items = Array.isArray(root.items) ? root.items : [];
+  const output: AlphaFinanceProduct[] = [];
+
+  for (const item of items) {
+    const product = asRecord(item);
+    if (!product) {
+      continue;
+    }
+    const info = asRecord(product.info) ?? {};
+    const amountInfo = asRecord(info.amount) ?? {};
+    const amount = readNumber(amountInfo.amount);
+    if (amount === null) {
+      continue;
+    }
+    const currency =
+      readCurrency(amountInfo.currIso) ??
+      readCurrency(amountInfo.currency) ??
+      'BYN';
+    const id = String(product.id ?? `${productType}-${output.length}`);
+    const name = String(info.title ?? product.type ?? productType);
+    const maskedNumber =
+      typeof info.number === 'string' ? info.number : null;
+
+    output.push({
+      id,
+      name,
+      type: String(product.type ?? productType),
+      currency,
+      amount: roundAmount(amount),
+      maskedNumber,
+    });
+  }
+
+  return output;
+}
+
 @Injectable()
 export class FinanceAlphaClient {
   constructor(private readonly configService: ConfigService) {}
@@ -313,6 +357,7 @@ export class FinanceAlphaClient {
     url.searchParams.set('scope', config.scope);
     url.searchParams.set('redirect_uri', config.redirectUri);
     url.searchParams.set('state', state);
+    url.searchParams.set('source', 'individual');
     return url.toString();
   }
 
@@ -322,6 +367,7 @@ export class FinanceAlphaClient {
       grant_type: 'authorization_code',
       code,
       redirect_uri: config.redirectUri,
+      source: 'individual',
     });
   }
 
@@ -330,46 +376,50 @@ export class FinanceAlphaClient {
     return this.requestToken(config, {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
+      source: 'individual',
     });
   }
 
   async fetchProducts(accessToken: string): Promise<AlphaFinanceProduct[]> {
     const config = this.requireConfig();
-    const configuredPath = config.accountsPath.startsWith('/')
-      ? config.accountsPath
-      : `/${config.accountsPath}`;
-    const paths = [
-      configuredPath,
-      '/individual/accounts/1.0.0/accounts',
-      '/individual/1.0.0/accounts',
-      '/accounts/1.0.0/accounts',
+    const bases = [
+      config.apiBase.replace(/\/$/, ''),
+      config.oauthBase.replace(/\/$/, ''),
+      'https://developerhub.alfabank.by:8273',
+      'https://ibapi.alfabank.by:8273',
+      'https://ibapi2.alfabank.by:8273',
     ].filter((value, index, list) => list.indexOf(value) === index);
 
-    const attempts: Array<{ base: string; timeoutMs: number }> = [
-      { base: config.oauthBase.replace(/\/$/, ''), timeoutMs: 12000 },
-      { base: config.apiBase.replace(/\/$/, ''), timeoutMs: 5000 },
-    ].filter(
-      (item, index, list) =>
-        list.findIndex((entry) => entry.base === item.base) === index,
-    );
+    const basePath = config.accountsPath.startsWith('/')
+      ? config.accountsPath.replace(/\/$/, '')
+      : `/${config.accountsPath.replace(/\/$/, '')}`;
+    const types = ['account', 'card', 'deposit', 'credit'] as const;
 
     let lastError = 'Не удалось получить счета Альфа-Банка';
-    for (const attempt of attempts) {
-      for (const path of paths) {
-        const url = `${attempt.base}${path}`;
+    const collected: AlphaFinanceProduct[] = [];
+    let success = false;
+
+    for (const base of bases) {
+      const typeResults: AlphaFinanceProduct[] = [];
+      let baseOk = true;
+
+      for (const type of types) {
+        const url = `${base}${basePath}/products?type=${type}`;
         try {
           const response = await alphaHttpsRequest(url, {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${accessToken}`,
               Accept: 'application/json',
+              'Content-Type': 'application/json',
             },
-            timeoutMs: attempt.timeoutMs,
+            timeoutMs: 15000,
           });
           const payload = parseJsonPayload(response.text);
           if (!payload) {
             lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${url})`;
-            continue;
+            baseOk = false;
+            break;
           }
           if (response.status < 200 || response.status >= 300) {
             const message =
@@ -380,26 +430,36 @@ export class FinanceAlphaClient {
                 ? (payload as { message: string }).message
                 : `HTTP ${response.status}: ${previewBody(response.text)}`;
             lastError = `${message} (${url})`;
-            continue;
+            baseOk = false;
+            break;
           }
-
-          const products: AlphaFinanceProduct[] = [];
-          collectProducts(payload, products);
-          const dedup = new Map<string, AlphaFinanceProduct>();
-          for (const product of products) {
-            dedup.set(`${product.id}:${product.currency}`, product);
-          }
-          return [...dedup.values()];
+          typeResults.push(...parseIndividualProducts(payload, type));
         } catch (err) {
           lastError =
             err instanceof Error
               ? `Сеть: ${err.message}`
               : 'Сеть: ошибка запроса счетов';
+          baseOk = false;
+          break;
         }
+      }
+
+      if (baseOk) {
+        collected.push(...typeResults);
+        success = true;
+        break;
       }
     }
 
-    throw new ServiceUnavailableException(lastError);
+    if (!success) {
+      throw new ServiceUnavailableException(lastError);
+    }
+
+    const dedup = new Map<string, AlphaFinanceProduct>();
+    for (const product of collected) {
+      dedup.set(`${product.id}:${product.currency}`, product);
+    }
+    return [...dedup.values()];
   }
 
   signState(userId: number) {
@@ -463,12 +523,13 @@ export class FinanceAlphaClient {
       'https://developerhub.alfabank.by:8273';
     const apiBase =
       this.configService.get<string>('ALPHA_API_BASE')?.trim() ||
-      'https://developerhub.alfabank.by:8243';
+      'https://developerhub.alfabank.by:8273';
     const accountsPath =
       this.configService.get<string>('ALPHA_ACCOUNTS_PATH')?.trim() ||
-      '/individual/accounts/v1/accounts';
+      '/individual/1.0.0/accounts';
     const scope =
-      this.configService.get<string>('ALPHA_SCOPE')?.trim() || 'accounts profile';
+      this.configService.get<string>('ALPHA_SCOPE')?.trim() ||
+      'accounts_individual';
     const redirectUri = this.resolveRedirectUri();
 
     if (!clientId || !clientSecret) {
