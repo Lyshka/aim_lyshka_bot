@@ -64,11 +64,22 @@ export class FinanceController {
     }
 
     try {
-      await this.financeService.alphaCallback(code, state);
+      const result = await this.financeService.alphaCallback(code, state);
+      if (result.syncOk) {
+        return res
+          .status(200)
+          .type('html')
+          .send(this.financeService.buildAlphaResultPage(true));
+      }
       return res
         .status(200)
         .type('html')
-        .send(this.financeService.buildAlphaResultPage(true));
+        .send(
+          this.financeService.buildAlphaResultPage(
+            true,
+            `Банк подключён, но счета не загрузились: ${result.syncError ?? 'ошибка синка'}. Вернись в Telegram → Финансы → Обновить.`,
+          ),
+        );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка авторизации';
       return res

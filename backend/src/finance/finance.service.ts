@@ -241,8 +241,14 @@ export class FinanceService {
     const userId = this.alphaClient.verifyState(state);
     const token = await this.alphaClient.exchangeCode(code);
     await this.saveProviderTokens(userId, 'alpha', token);
-    await this.syncAlpha(userId);
-    return userId;
+    try {
+      await this.syncAlpha(userId);
+      return { userId, syncOk: true as const };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Не удалось обновить счета';
+      return { userId, syncOk: false as const, syncError: message };
+    }
   }
 
   async alphaSync(userId: number) {
@@ -278,8 +284,10 @@ export class FinanceService {
   buildAlphaResultPage(success: boolean, message?: string) {
     const title = success ? 'Альфа-Банк подключён' : 'Не удалось подключить';
     const detail = success
-      ? 'Можно закрыть эту вкладку и вернуться в Telegram → lyshka-service → Финансы.'
-      : message?.trim() || 'Попробуй подключить ещё раз из приложения в Telegram.';
+      ? message?.trim() ||
+        'Можно закрыть эту вкладку и вернуться в Telegram → lyshka-service → Финансы.'
+      : message?.trim() ||
+        'Попробуй подключить ещё раз из приложения в Telegram. Не обновляй эту страницу — код одноразовый.';
     const color = success ? '#1f6f5b' : '#9f1239';
     return `<!doctype html>
 <html lang="ru">
@@ -291,7 +299,7 @@ export class FinanceService {
     body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Manrope,system-ui,sans-serif;background:#dfe6ee;color:#0f172a;padding:24px}
     .card{max-width:420px;width:100%;background:#fff;border-radius:24px;padding:28px;box-shadow:0 10px 30px rgba(15,23,42,.08)}
     h1{margin:0 0 12px;font-size:24px;color:${color}}
-    p{margin:0;line-height:1.5;color:#5f6f82;font-size:15px}
+    p{margin:0;line-height:1.5;color:#5f6f82;font-size:15px;word-break:break-word}
   </style>
 </head>
 <body>

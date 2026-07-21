@@ -318,23 +318,19 @@ export class FinanceAlphaClient {
 
   async exchangeCode(code: string): Promise<AlphaTokenResponse> {
     const config = this.requireConfig();
-    const body = new URLSearchParams();
-    body.set('grant_type', 'authorization_code');
-    body.set('code', code);
-    body.set('redirect_uri', config.redirectUri);
-    body.set('client_id', config.clientId);
-    body.set('client_secret', config.clientSecret);
-    return this.requestToken(config, body);
+    return this.requestToken(config, {
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: config.redirectUri,
+    });
   }
 
   async refreshAccessToken(refreshToken: string): Promise<AlphaTokenResponse> {
     const config = this.requireConfig();
-    const body = new URLSearchParams();
-    body.set('grant_type', 'refresh_token');
-    body.set('refresh_token', refreshToken);
-    body.set('client_id', config.clientId);
-    body.set('client_secret', config.clientSecret);
-    return this.requestToken(config, body);
+    return this.requestToken(config, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
   }
 
   async fetchProducts(accessToken: string): Promise<AlphaFinanceProduct[]> {
@@ -347,56 +343,59 @@ export class FinanceAlphaClient {
       '/individual/accounts/1.0.0/accounts',
       '/individual/1.0.0/accounts',
       '/accounts/1.0.0/accounts',
-      '/individual/accounts/v1.0.0/accounts',
     ].filter((value, index, list) => list.indexOf(value) === index);
 
-    const bases = [
-      config.apiBase.replace(/\/$/, ''),
-      config.oauthBase.replace(/\/$/, ''),
-    ].filter((value, index, list) => list.indexOf(value) === index);
-
-    const urls = bases.flatMap((base) => paths.map((path) => `${base}${path}`));
+    const attempts: Array<{ base: string; timeoutMs: number }> = [
+      { base: config.oauthBase.replace(/\/$/, ''), timeoutMs: 12000 },
+      { base: config.apiBase.replace(/\/$/, ''), timeoutMs: 5000 },
+    ].filter(
+      (item, index, list) =>
+        list.findIndex((entry) => entry.base === item.base) === index,
+    );
 
     let lastError = 'Не удалось получить счета Альфа-Банка';
-    for (const url of urls) {
-      try {
-        const response = await alphaHttpsRequest(url, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: 'application/json',
-          },
-          timeoutMs: 20000,
-        });
-        const payload = parseJsonPayload(response.text);
-        if (!payload) {
-          lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${url})`;
-          continue;
-        }
-        if (response.status < 200 || response.status >= 300) {
-          const message =
-            typeof payload === 'object' &&
-            payload &&
-            'message' in payload &&
-            typeof (payload as { message?: unknown }).message === 'string'
-              ? (payload as { message: string }).message
-              : `HTTP ${response.status}: ${previewBody(response.text)}`;
-          lastError = `${message} (${url})`;
-          continue;
-        }
+    for (const attempt of attempts) {
+      for (const path of paths) {
+        const url = `${attempt.base}${path}`;
+        try {
+          const response = await alphaHttpsRequest(url, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/json',
+            },
+            timeoutMs: attempt.timeoutMs,
+          });
+          const payload = parseJsonPayload(response.text);
+          if (!payload) {
+            lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${url})`;
+            continue;
+          }
+          if (response.status < 200 || response.status >= 300) {
+            const message =
+              typeof payload === 'object' &&
+              payload &&
+              'message' in payload &&
+              typeof (payload as { message?: unknown }).message === 'string'
+                ? (payload as { message: string }).message
+                : `HTTP ${response.status}: ${previewBody(response.text)}`;
+            lastError = `${message} (${url})`;
+            continue;
+          }
 
-        const products: AlphaFinanceProduct[] = [];
-        collectProducts(payload, products);
-        const dedup = new Map<string, AlphaFinanceProduct>();
-        for (const product of products) {
-          dedup.set(`${product.id}:${product.currency}`, product);
+          const products: AlphaFinanceProduct[] = [];
+          collectProducts(payload, products);
+          const dedup = new Map<string, AlphaFinanceProduct>();
+          for (const product of products) {
+            dedup.set(`${product.id}:${product.currency}`, product);
+          }
+          return [...dedup.values()];
+        } catch (err) {
+          lastError =
+            err instanceof Error
+              ? `Сеть: ${err.message}`
+              : 'Сеть: ошибка запроса счетов';
         }
-        return [...dedup.values()];
-      } catch (err) {
-        lastError =
-          err instanceof Error
-            ? `Сеть: ${err.message}`
-            : 'Сеть: ошибка запроса счетов';
       }
     }
 
@@ -504,57 +503,58 @@ export class FinanceAlphaClient {
 
   private async requestToken(
     config: AlphaClientConfig,
-    body: URLSearchParams,
+    fields: Record<string, string>,
   ): Promise<AlphaTokenResponse> {
-    const tokenUrls = [
-      this.configService.get<string>('ALPHA_TOKEN_URL')?.trim(),
-      `${config.oauthBase.replace(/\/$/, '')}/token`,
-      `${config.oauthBase.replace(/\/$/, '')}/oauth/token`,
-    ].filter((value, index, list): value is string =>
-      Boolean(value) && list.indexOf(value) === index,
-    );
+    const tokenUrl =
+      this.configService.get<string>('ALPHA_TOKEN_URL')?.trim() ||
+      `${config.oauthBase.replace(/\/$/, '')}/token`;
 
     const auth = Buffer.from(
       `${config.clientId}:${config.clientSecret}`,
     ).toString('base64');
-    const payloadBody = body.toString();
+
+    const bodies: URLSearchParams[] = [
+      new URLSearchParams({
+        ...fields,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+      new URLSearchParams(fields),
+    ];
+
+    const headerVariants: Array<Record<string, string>> = [
+      {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json, application/x-www-form-urlencoded, */*',
+        Authorization: `Basic ${auth}`,
+      },
+      {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json, application/x-www-form-urlencoded, */*',
+      },
+    ];
 
     let lastError = 'Не удалось получить токен Альфа-Банка';
 
-    for (const tokenUrl of tokenUrls) {
-      const variants: Array<{ headers: Record<string, string> }> = [
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Accept: 'application/json',
-            Authorization: `Basic ${auth}`,
-          },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Accept: 'application/json',
-          },
-        },
-      ];
-
-      for (const variant of variants) {
+    for (const body of bodies) {
+      const payloadBody = body.toString();
+      for (const headers of headerVariants) {
         try {
           const response = await alphaHttpsRequest(tokenUrl, {
             method: 'POST',
             headers: {
-              ...variant.headers,
+              ...headers,
               'Content-Length': Buffer.byteLength(payloadBody).toString(),
             },
             body: payloadBody,
-            timeoutMs: 20000,
+            timeoutMs: 15000,
           });
-          const token = parseTokenPayload(response.text);
-          if (!token?.access_token) {
+          if (response.status < 200 || response.status >= 300) {
             lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${tokenUrl})`;
             continue;
           }
-          if (response.status < 200 || response.status >= 300) {
+          const token = parseTokenPayload(response.text);
+          if (!token?.access_token) {
             lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${tokenUrl})`;
             continue;
           }
