@@ -40,8 +40,67 @@ type AlphaHttpResult = {
   text: string;
 };
 
+function previewBody(text: string, max = 160) {
+  const compact = text.replace(/\s+/g, ' ').trim();
+  if (!compact) {
+    return 'пусто';
+  }
+  return compact.length > max ? `${compact.slice(0, max)}…` : compact;
+}
+
 function roundAmount(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function parseTokenPayload(text: string): AlphaTokenResponse | null {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const json = JSON.parse(trimmed) as AlphaTokenResponse;
+      if (json.access_token) {
+        return json;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  if (trimmed.includes('access_token=')) {
+    const params = new URLSearchParams(trimmed);
+    const accessToken = params.get('access_token');
+    if (!accessToken) {
+      return null;
+    }
+    const expiresRaw = params.get('expires_in');
+    return {
+      access_token: accessToken,
+      refresh_token: params.get('refresh_token') ?? undefined,
+      expires_in: expiresRaw ? Number(expiresRaw) : undefined,
+      scope: params.get('scope') ?? undefined,
+      token_type: params.get('token_type') ?? undefined,
+    };
+  }
+
+  return null;
+}
+
+function parseJsonPayload(text: string): unknown | null {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
 }
 
 function alphaHttpsRequest(
@@ -280,13 +339,23 @@ export class FinanceAlphaClient {
 
   async fetchProducts(accessToken: string): Promise<AlphaFinanceProduct[]> {
     const config = this.requireConfig();
-    const path = config.accountsPath.startsWith('/')
+    const configuredPath = config.accountsPath.startsWith('/')
       ? config.accountsPath
       : `/${config.accountsPath}`;
-    const urls = [
-      `${config.apiBase.replace(/\/$/, '')}${path}`,
-      `${config.oauthBase.replace(/\/$/, '')}${path}`,
-    ];
+    const paths = [
+      configuredPath,
+      '/individual/accounts/1.0.0/accounts',
+      '/individual/1.0.0/accounts',
+      '/accounts/1.0.0/accounts',
+      '/individual/accounts/v1.0.0/accounts',
+    ].filter((value, index, list) => list.indexOf(value) === index);
+
+    const bases = [
+      config.apiBase.replace(/\/$/, ''),
+      config.oauthBase.replace(/\/$/, ''),
+    ].filter((value, index, list) => list.indexOf(value) === index);
+
+    const urls = bases.flatMap((base) => paths.map((path) => `${base}${path}`));
 
     let lastError = 'Не удалось получить счета Альфа-Банка';
     for (const url of urls) {
@@ -299,14 +368,10 @@ export class FinanceAlphaClient {
           },
           timeoutMs: 20000,
         });
-        let payload: unknown = null;
-        if (response.text) {
-          try {
-            payload = JSON.parse(response.text);
-          } catch {
-            lastError = `Некорректный ответ банка (${url})`;
-            continue;
-          }
+        const payload = parseJsonPayload(response.text);
+        if (!payload) {
+          lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${url})`;
+          continue;
         }
         if (response.status < 200 || response.status >= 300) {
           const message =
@@ -315,8 +380,8 @@ export class FinanceAlphaClient {
             'message' in payload &&
             typeof (payload as { message?: unknown }).message === 'string'
               ? (payload as { message: string }).message
-              : `HTTP ${response.status}`;
-          lastError = message;
+              : `HTTP ${response.status}: ${previewBody(response.text)}`;
+          lastError = `${message} (${url})`;
           continue;
         }
 
@@ -484,35 +549,13 @@ export class FinanceAlphaClient {
             body: payloadBody,
             timeoutMs: 20000,
           });
-          let payload: unknown = null;
-          if (response.text) {
-            try {
-              payload = JSON.parse(response.text);
-            } catch {
-              lastError = `Некорректный ответ токена (${tokenUrl})`;
-              continue;
-            }
-          }
-          if (response.status < 200 || response.status >= 300) {
-            const message =
-              typeof payload === 'object' &&
-              payload &&
-              'error_description' in payload &&
-              typeof (payload as { error_description?: unknown })
-                .error_description === 'string'
-                ? (payload as { error_description: string }).error_description
-                : typeof payload === 'object' &&
-                    payload &&
-                    'error' in payload &&
-                    typeof (payload as { error?: unknown }).error === 'string'
-                  ? (payload as { error: string }).error
-                  : `HTTP ${response.status}`;
-            lastError = `${message} (${tokenUrl})`;
+          const token = parseTokenPayload(response.text);
+          if (!token?.access_token) {
+            lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${tokenUrl})`;
             continue;
           }
-          const token = payload as AlphaTokenResponse;
-          if (!token.access_token) {
-            lastError = 'Альфа-Банк не вернул access_token';
+          if (response.status < 200 || response.status >= 300) {
+            lastError = `HTTP ${response.status}: ${previewBody(response.text)} (${tokenUrl})`;
             continue;
           }
           return token;
