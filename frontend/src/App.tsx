@@ -7,7 +7,6 @@ import {
 import { AdminScreen } from './screens/AdminScreen';
 import { CatsApp } from './screens/CatsApp';
 import { GamesApp } from './screens/GamesApp';
-import { HealthApp } from './screens/HealthApp';
 import { LauncherScreen } from './screens/LauncherScreen';
 import { MedsApp } from './screens/MedsApp';
 import { LinksApp } from './screens/LinksApp';
@@ -20,9 +19,6 @@ function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
   }
   if (app.slug === 'meds') {
     return 'meds';
-  }
-  if (app.slug === 'health') {
-    return 'health';
   }
   if (app.slug === 'cats') {
     return 'cats';
@@ -101,8 +97,6 @@ function AppContent() {
     screen = <MedsApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'cats') {
     screen = <CatsApp onBack={() => setActiveApp(null)} />;
-  } else if (activeApp?.slug === 'health') {
-    screen = <HealthApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'games') {
     screen = <GamesApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'stats') {

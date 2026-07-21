@@ -27,15 +27,6 @@ const CATALOG = [
     isSystem: false,
   },
   {
-    slug: 'health',
-    name: 'Здоровье',
-    description: 'Шаги и вес из Health / ОКОК',
-    icon: 'health',
-    color: '#2563eb',
-    sortOrder: 30,
-    isSystem: false,
-  },
-  {
     slug: 'games',
     name: 'Игры',
     description: 'Steam wishlist — что есть и чего нет',
@@ -126,6 +117,7 @@ export class AppsService implements OnModuleInit {
 
   async ensureCatalog() {
     await this.renameStudyAppToLinks();
+    await this.deactivateHealthApp();
 
     for (const item of CATALOG) {
       await this.prisma.app.upsert({
@@ -168,6 +160,13 @@ export class AppsService implements OnModuleInit {
         update: {},
       });
     }
+  }
+
+  private async deactivateHealthApp() {
+    await this.prisma.app.updateMany({
+      where: { slug: 'health' },
+      data: { active: false },
+    });
   }
 
   private async renameStudyAppToLinks() {

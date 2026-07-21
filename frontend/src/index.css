@@ -90,13 +90,6 @@ textarea {
     var(--tg-bg);
 }
 
-.app-bg-health {
-  background:
-    radial-gradient(120% 80% at 0% 0%, rgba(59, 130, 246, 0.16), transparent 60%),
-    radial-gradient(90% 60% at 100% 100%, rgba(191, 219, 254, 0.42), transparent 55%),
-    var(--tg-bg);
-}
-
 .app-bg-cats {
   background:
     radial-gradient(100% 70% at 100% 0%, rgba(251, 146, 60, 0.22), transparent 55%),
@@ -149,15 +142,6 @@ textarea {
   height: 220px;
   background: rgba(56, 189, 248, 0.14);
   animation: app-float 11s ease-in-out infinite reverse;
-}
-
-.app-orb-health {
-  top: 10%;
-  left: -18%;
-  width: 220px;
-  height: 220px;
-  background: rgba(59, 130, 246, 0.16);
-  animation: app-float 10s ease-in-out infinite;
 }
 
 .app-orb-cats {

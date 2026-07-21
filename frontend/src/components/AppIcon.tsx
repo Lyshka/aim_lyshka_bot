@@ -76,24 +76,6 @@ export function AppIcon({ slug, className = 'h-9 w-9' }: AppIconProps) {
     );
   }
 
-  if (slug === 'health') {
-    return (
-      <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
-        <path
-          d="M24 38s-12-7.5-12-16a7 7 0 0 1 12-4 7 7 0 0 1 12 4c0 8.5-12 16-12 16Z"
-          fill="currentColor"
-        />
-        <path
-          d="M16 22h5l2.5-5 3 10 2-5H32"
-          stroke="#fff"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
   if (slug === 'games') {
     return (
       <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
@@ -193,13 +175,6 @@ export function appAccent(slug: string, fallback: string) {
       from: '#fb923c',
       to: '#c2410c',
       glow: 'rgba(234, 88, 12, 0.4)',
-    };
-  }
-  if (slug === 'health') {
-    return {
-      from: '#60a5fa',
-      to: '#1d4ed8',
-      glow: 'rgba(37, 99, 235, 0.4)',
     };
   }
   if (slug === 'games') {

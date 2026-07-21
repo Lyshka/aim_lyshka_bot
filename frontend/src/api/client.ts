@@ -153,44 +153,6 @@ export type CatFeed = {
   settings: CatsSettings;
 };
 
-export type HealthDay = {
-  id: string;
-  day: string;
-  steps: number | null;
-  weightKg: number | null;
-  bodyFatPercent: number | null;
-  leanBodyMassKg: number | null;
-  muscleMassKg: number | null;
-  waterPercent: number | null;
-  boneMassKg: number | null;
-  bmi: number | null;
-  heightCm: number | null;
-  walkingSpeedKmh: number | null;
-  walkingStepLengthCm: number | null;
-  source: string;
-  updatedAt: string;
-};
-
-export type HealthOverview = {
-  today: HealthDay | null;
-  history: HealthDay[];
-  ingestConfigured: boolean;
-  timeZone: string;
-  profile: {
-    birthDate: string | null;
-    age: number | null;
-    heightCm: number | null;
-    weightKg: number | null;
-  };
-  stats: {
-    daysTracked: number;
-    lastWeightKg: number | null;
-    lastSteps: number | null;
-    lastHeightCm: number | null;
-    lastSyncAt: string | null;
-  };
-};
-
 export type SteamGame = {
   id: string;
   appId: string;
@@ -524,11 +486,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
-  healthOverview: (initData: string) =>
-    request<HealthOverview>('/api/health/overview', {
-      method: 'POST',
-      body: JSON.stringify({ initData }),
-    }),
   gamesOverview: (initData: string) =>
     request<GamesOverview>('/api/games/overview', {
       method: 'POST',
@@ -643,22 +600,6 @@ export const api = {
     request<StudyTrash>('/api/study/trash/purge', {
       method: 'POST',
       body: JSON.stringify({ initData }),
-    }),
-  healthManual: (
-    initData: string,
-    data: {
-      day?: string;
-      steps?: number;
-      weightKg?: number;
-      bodyFatPercent?: number;
-      bmi?: number;
-      heightCm?: number;
-      leanBodyMassKg?: number;
-    },
-  ) =>
-    request<HealthDay>('/api/health/manual', {
-      method: 'POST',
-      body: JSON.stringify({ initData, ...data }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

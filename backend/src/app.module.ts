@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module';
 import { BotModule } from './bot/bot.module';
 import { CatsModule } from './cats/cats.module';
 import { GamesModule } from './games/games.module';
-import { HealthModule } from './health/health.module';
 import { MedsModule } from './meds/meds.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RemindersModule } from './reminders/reminders.module';
@@ -28,7 +27,6 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     MedsModule,
     CatsModule,
-    HealthModule,
     GamesModule,
     StatsModule,
     StudyModule,

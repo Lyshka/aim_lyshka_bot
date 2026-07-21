@@ -68,9 +68,6 @@ export class AuthService {
       await this.appsService.setGrant(userId, 'meds', true).catch(() => undefined);
       await this.appsService.setGrant(userId, 'cats', true).catch(() => undefined);
       await this.appsService
-        .setGrant(userId, 'health', true)
-        .catch(() => undefined);
-      await this.appsService
         .setGrant(userId, 'games', true)
         .catch(() => undefined);
       await this.appsService

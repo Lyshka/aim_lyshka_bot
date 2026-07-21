@@ -20,7 +20,6 @@ model User {
   intakes      MedicationIntake[]
   settings     UserSettings?
   appGrants    UserAppGrant[]
-  healthDays   HealthDay[]
   catPosts     CatPost[]
   steamProfiles SteamProfile[]
   steamGames   SteamWishlistGame[]
@@ -66,7 +65,6 @@ model UserSettings {
   catsReminderChangedOn    String?
   catsLastDeliveryDate     String?
   timezone                 String    @default("Europe/Moscow")
-  birthDate                String?
   defaultInterval          Int       @default(1)
   notificationsMutedUntil  DateTime?
   createdAt                DateTime  @default(now())
@@ -128,30 +126,6 @@ model CatPost {
   @@unique([userId, imageKey])
   @@unique([userId, textKey])
   @@index([userId, createdAt])
-}
-
-model HealthDay {
-  id                       String   @id @default(cuid())
-  userId                   BigInt
-  day                      String
-  steps                    Int?
-  weightKg                 Float?
-  bodyFatPercent           Float?
-  leanBodyMassKg           Float?
-  muscleMassKg             Float?
-  waterPercent             Float?
-  boneMassKg               Float?
-  bmi                      Float?
-  heightCm                 Float?
-  walkingSpeedKmh          Float?
-  walkingStepLengthCm      Float?
-  source                   String   @default("manual")
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, day])
-  @@index([userId, day])
 }
 
 model SteamProfile {
