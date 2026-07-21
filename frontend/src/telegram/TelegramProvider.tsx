@@ -8,6 +8,7 @@ import {
 } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { api, type AppUser, type PlatformApp } from '../api/client';
+import { applyAppTheme, bindThemeChanges } from './applyTheme';
 
 type TelegramContextValue = {
   ready: boolean;
@@ -83,39 +84,21 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    let unbindTheme = () => {};
 
     async function boot() {
       try {
         WebApp.ready();
         WebApp.expand();
         WebApp.disableVerticalSwipes?.();
-        document.documentElement.style.setProperty(
-          '--tg-bg',
-          WebApp.themeParams.bg_color || '#f4f6f8',
-        );
-        document.documentElement.style.setProperty(
-          '--tg-text',
-          WebApp.themeParams.text_color || '#101820',
-        );
-        document.documentElement.style.setProperty(
-          '--tg-hint',
-          WebApp.themeParams.hint_color || '#6b7785',
-        );
-        document.documentElement.style.setProperty(
-          '--tg-button',
-          WebApp.themeParams.button_color || '#1f6f5b',
-        );
-        document.documentElement.style.setProperty(
-          '--tg-button-text',
-          WebApp.themeParams.button_text_color || '#ffffff',
-        );
-        document.documentElement.style.setProperty(
-          '--tg-secondary',
-          WebApp.themeParams.secondary_bg_color || '#e8eef3',
+        applyAppTheme(
+          WebApp.themeParams as Record<string, string | undefined>,
         );
       } catch {
-        //
+        applyAppTheme();
       }
+
+      unbindTheme = bindThemeChanges();
 
       const data = readInitData();
       const insideTelegram = Boolean(data);
@@ -161,6 +144,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
     return () => {
       alive = false;
+      unbindTheme();
     };
   }, []);
 

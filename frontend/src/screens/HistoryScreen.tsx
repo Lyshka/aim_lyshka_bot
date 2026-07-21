@@ -213,7 +213,7 @@ export function HistoryScreen() {
       {!showDeleted ? (
         <section
           className="space-y-2 rounded-3xl px-5 py-4"
-          style={{ background: 'var(--tg-secondary)' }}
+          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
         >
           <p className="text-sm font-medium">Удаление за период</p>
           <ActionButton disabled={busy} onClick={() => void clearPeriod()} danger>
@@ -223,7 +223,7 @@ export function HistoryScreen() {
       ) : (
         <section
           className="space-y-2 rounded-3xl px-5 py-4"
-          style={{ background: 'var(--tg-secondary)' }}
+          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
         >
           <p className="text-sm font-medium">Окончательное удаление</p>
           <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
@@ -255,7 +255,7 @@ export function HistoryScreen() {
       {error ? (
         <div
           className="rounded-3xl px-5 py-5"
-          style={{ background: 'var(--tg-secondary)' }}
+          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
         >
           {error}
         </div>
@@ -275,7 +275,7 @@ export function HistoryScreen() {
             <section
               key={group.key}
               className="overflow-hidden rounded-3xl"
-              style={{ background: 'var(--tg-secondary)' }}
+              style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
             >
               <div
                 className="flex items-center justify-between px-5 py-3"
@@ -346,8 +346,8 @@ export function HistoryScreen() {
                           className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
                           style={{
                             background:
-                              'color-mix(in srgb, #b42318 16%, transparent)',
-                            color: '#b42318',
+                              'color-mix(in srgb, var(--app-danger) 16%, transparent)',
+                            color: 'var(--app-danger)',
                           }}
                         >
                           Удалить
@@ -388,12 +388,12 @@ function ActionButton({
       className={`rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50 ${fullWidth ? 'w-full' : ''}`}
       style={{
         background: danger
-          ? 'color-mix(in srgb, #b42318 16%, transparent)'
+          ? 'color-mix(in srgb, var(--app-danger) 16%, transparent)'
           : secondary
             ? 'color-mix(in srgb, var(--tg-hint) 14%, transparent)'
             : 'var(--tg-button)',
         color: danger
-          ? '#b42318'
+          ? 'var(--app-danger)'
           : secondary
             ? 'var(--tg-text)'
             : 'var(--tg-button-text)',

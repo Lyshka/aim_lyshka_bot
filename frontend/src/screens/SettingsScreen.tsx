@@ -120,7 +120,7 @@ export function SettingsScreen() {
       {creating ? (
         <section
           className="space-y-3 rounded-3xl px-5 py-4"
-          style={{ background: 'var(--tg-secondary)' }}
+          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
         >
           <h3 className="font-display text-lg font-semibold">Новый препарат</h3>
           <Field
@@ -191,7 +191,7 @@ export function SettingsScreen() {
             <article
               key={med.id}
               className="rounded-3xl px-5 py-4"
-              style={{ background: 'var(--tg-secondary)' }}
+              style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
             >
               {!editing ? (
                 <div className="flex items-start justify-between gap-3">
@@ -316,7 +316,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full rounded-xl border-0 px-3 py-2 outline-none"
-        style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+        style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
       />
     </label>
   );
@@ -342,7 +342,7 @@ function TextArea({
         placeholder={placeholder}
         rows={3}
         className="mt-1 w-full resize-y rounded-xl border-0 px-3 py-2 outline-none"
-        style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+        style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
       />
     </label>
   );

@@ -12,9 +12,11 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
   return (
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 pt-10 pb-12">
       <header className="mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.18em] uppercase text-teal-800/80"
+        <div
+          className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.18em] uppercase"
           style={{
-            background: 'color-mix(in srgb, #0f766e 12%, transparent)',
+            background: 'color-mix(in srgb, var(--tg-button) 14%, transparent)',
+            color: 'var(--tg-button)',
             backdropFilter: 'blur(8px)',
           }}
         >
@@ -33,7 +35,7 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
           <div
             className="rounded-[28px] border border-white/40 px-5 py-10 text-center text-sm shadow-[0_20px_50px_rgba(15,23,42,0.06)]"
             style={{
-              background: 'color-mix(in srgb, var(--tg-secondary) 70%, white)',
+              background: 'color-mix(in srgb, var(--app-surface-muted) 55%, var(--app-surface))',
               color: 'var(--tg-hint)',
               backdropFilter: 'blur(12px)',
             }}

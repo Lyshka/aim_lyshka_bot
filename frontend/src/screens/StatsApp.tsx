@@ -152,7 +152,7 @@ export function StatsApp({ onBack }: StatsAppProps) {
         }}
         className="rounded-2xl px-3 py-2 text-sm font-medium"
         style={{
-          background: 'color-mix(in srgb, white 55%, #0e7490)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 55%, #0e7490)',
         }}
       >
         ← Назад
@@ -170,7 +170,7 @@ export function StatsApp({ onBack }: StatsAppProps) {
       <section
         className="space-y-3 rounded-3xl px-4 py-4"
         style={{
-          background: 'color-mix(in srgb, white 72%, #0e7490)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #0e7490)',
         }}
       >
         <input
@@ -178,7 +178,7 @@ export function StatsApp({ onBack }: StatsAppProps) {
           onChange={(e) => setSteamInput(e.target.value)}
           placeholder="https://steamcommunity.com/id/ник"
           className="w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
-          style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+          style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               void lookup();
@@ -203,8 +203,8 @@ export function StatsApp({ onBack }: StatsAppProps) {
         <p
           className="mt-3 rounded-2xl px-4 py-3 text-sm"
           style={{
-            background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-            color: '#9f1239',
+            background: 'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+            color: 'var(--app-danger)',
           }}
         >
           {error}
@@ -443,8 +443,8 @@ function OverviewTab({
         <p
           className="rounded-2xl px-4 py-3 text-sm"
           style={{
-            background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-            color: '#9f1239',
+            background: 'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+            color: 'var(--app-danger)',
           }}
         >
           Профиль Leetify скрыт ({data.leetify.privacyMode}).
@@ -586,7 +586,7 @@ function LeetifyTab({
           <div
             className="space-y-2 rounded-3xl px-4 py-3"
             style={{
-              background: 'color-mix(in srgb, white 75%, #0e7490)',
+              background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
             }}
           >
             {leetify.ranks.competitive.map((item) => (
@@ -629,7 +629,7 @@ function FaceitTab({
       <section
         className="flex items-center gap-3 rounded-3xl px-4 py-3"
         style={{
-          background: 'color-mix(in srgb, white 75%, #0e7490)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
         }}
       >
         {faceit.avatar ? (
@@ -684,7 +684,7 @@ function FaceitTab({
           <div
             className="space-y-2 rounded-3xl px-4 py-3"
             style={{
-              background: 'color-mix(in srgb, white 75%, #0e7490)',
+              background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
             }}
           >
             {cs2Maps.slice(0, 10).map((item) => (
@@ -719,10 +719,10 @@ function FaceitTab({
         <div
           className="space-y-2 rounded-3xl px-4 py-3 text-sm"
           style={{
-            background: 'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
+            background: 'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
           }}
         >
-          <p className="font-semibold" style={{ color: '#9f1239' }}>
+          <p className="font-semibold" style={{ color: 'var(--app-danger)' }}>
             Faceit баны
           </p>
           {faceit.bans.map((ban, index) => (
@@ -757,7 +757,7 @@ function MatchesTab({
               key={match.id}
               className="rounded-2xl px-3 py-3"
               style={{
-                background: 'color-mix(in srgb, white 75%, #0e7490)',
+                background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
               }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -797,7 +797,7 @@ function MatchesTab({
               key={match.matchId}
               className="rounded-2xl px-3 py-3"
               style={{
-                background: 'color-mix(in srgb, white 75%, #0e7490)',
+                background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
               }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -849,7 +849,7 @@ function TrackerButton({
       onClick={onClick}
       className="rounded-[22px] px-3 py-3 text-left transition active:scale-[0.98]"
       style={{
-        background: 'color-mix(in srgb, white 75%, #0e7490)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
       }}
     >
       <p className="text-sm font-semibold">{label}</p>
@@ -888,7 +888,7 @@ function StatTile({
     <div
       className="rounded-[22px] px-3 py-3"
       style={{
-        background: 'color-mix(in srgb, white 75%, #0e7490)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #0e7490)',
       }}
     >
       <p className="text-[11px] font-medium" style={{ color: 'var(--tg-hint)' }}>

@@ -23,7 +23,7 @@ export function CustomCheckbox({
         style={{
           background: checked
             ? 'var(--tg-button)'
-            : 'var(--tg-bg)',
+            : 'var(--app-surface)',
           border: checked
             ? '2px solid var(--tg-button)'
             : '2px solid color-mix(in srgb, var(--tg-hint) 45%, transparent)',

@@ -21,7 +21,7 @@ export function DayRangeFilter({
   onApply,
   onReset,
   disabled,
-  background = 'var(--tg-secondary)',
+  background = 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))',
   children,
 }: DayRangeFilterProps) {
   return (

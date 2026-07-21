@@ -5,17 +5,46 @@
   --font-display: "Outfit", system-ui, sans-serif;
 }
 
-:root {
-  --tg-bg: var(--tg-theme-bg-color, #f4f6f8);
-  --tg-text: var(--tg-theme-text-color, #101820);
-  --tg-hint: var(--tg-theme-hint-color, #6b7785);
-  --tg-link: var(--tg-theme-link-color, #1f6f5b);
-  --tg-button: var(--tg-theme-button-color, #1f6f5b);
-  --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
-  --tg-secondary: var(--tg-theme-secondary-bg-color, #e8eef3);
-  --tg-section: var(--tg-theme-section-bg-color, #ffffff);
-  --tg-header: var(--tg-theme-header-bg-color, #f4f6f8);
+:root,
+[data-theme="light"] {
+  --app-bg: #dfe6ee;
+  --app-surface: #ffffff;
+  --app-surface-muted: #c5d0dc;
+  --app-border: rgba(15, 23, 42, 0.14);
+  --app-text: #0f172a;
+  --app-hint: #5f6f82;
+  --app-danger: #9f1239;
+  --app-link: #1f6f5b;
+  --tg-bg: var(--app-bg);
+  --tg-text: var(--app-text);
+  --tg-hint: var(--app-hint);
+  --tg-link: var(--app-link);
+  --tg-button: #1f6f5b;
+  --tg-button-text: #ffffff;
+  --tg-secondary: var(--app-surface-muted);
+  --tg-section: var(--app-surface);
+  --tg-header: var(--app-bg);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme="dark"] {
+  --app-bg: #0c1016;
+  --app-surface: #171d27;
+  --app-surface-muted: #252f3d;
+  --app-border: rgba(255, 255, 255, 0.12);
+  --app-text: #e8eef5;
+  --app-hint: #93a1b3;
+  --app-danger: #fca5a5;
+  --app-link: #2dd4bf;
+  --tg-bg: var(--app-bg);
+  --tg-text: var(--app-text);
+  --tg-hint: var(--app-hint);
+  --tg-link: var(--app-link);
+  --tg-button: #2dd4bf;
+  --tg-button-text: #052e24;
+  --tg-secondary: var(--app-surface-muted);
+  --tg-section: var(--app-surface);
+  --tg-header: var(--app-bg);
 }
 
 * {
@@ -33,15 +62,47 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  color: var(--tg-text);
-  background: var(--tg-bg);
+  color: var(--app-text);
+  background: var(--app-bg);
   overscroll-behavior: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--app-text);
 }
 
 button,
 input,
 textarea {
   font: inherit;
+}
+
+.app-input {
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: inset 0 0 0 1px var(--app-border);
+}
+
+.app-surface {
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: inset 0 0 0 1px var(--app-border);
+}
+
+.app-nav {
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-color: var(--app-border);
+}
+
+input.rounded-xl,
+textarea.rounded-xl {
+  box-shadow: inset 0 0 0 1px var(--app-border);
 }
 
 .date-native-input {
@@ -55,7 +116,7 @@ textarea {
   padding: 0;
   cursor: pointer;
   z-index: 2;
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 .date-native-input::-webkit-calendar-picker-indicator {
@@ -77,45 +138,45 @@ textarea {
 .app-bg-launcher,
 .app-bg-admin {
   background:
-    radial-gradient(120% 80% at 10% -10%, rgba(15, 118, 110, 0.16), transparent 55%),
-    radial-gradient(90% 70% at 100% 0%, rgba(14, 165, 233, 0.12), transparent 50%),
-    radial-gradient(80% 60% at 50% 100%, rgba(15, 23, 42, 0.06), transparent 55%),
-    var(--tg-bg);
+    radial-gradient(120% 80% at 10% -10%, rgba(15, 118, 110, 0.2), transparent 55%),
+    radial-gradient(90% 70% at 100% 0%, rgba(14, 165, 233, 0.16), transparent 50%),
+    radial-gradient(80% 60% at 50% 100%, rgba(15, 23, 42, 0.08), transparent 55%),
+    var(--app-bg);
 }
 
 .app-bg-meds {
   background:
-    radial-gradient(120% 80% at 0% 0%, rgba(15, 118, 110, 0.15), transparent 58%),
-    radial-gradient(90% 65% at 100% 100%, rgba(204, 251, 241, 0.45), transparent 55%),
-    var(--tg-bg);
+    radial-gradient(120% 80% at 0% 0%, rgba(15, 118, 110, 0.22), transparent 58%),
+    radial-gradient(90% 65% at 100% 100%, rgba(20, 184, 166, 0.18), transparent 55%),
+    var(--app-bg);
 }
 
 .app-bg-cats {
   background:
-    radial-gradient(100% 70% at 100% 0%, rgba(251, 146, 60, 0.22), transparent 55%),
-    radial-gradient(80% 50% at 0% 100%, rgba(254, 215, 170, 0.35), transparent 50%),
-    var(--tg-bg);
+    radial-gradient(100% 70% at 100% 0%, rgba(251, 146, 60, 0.28), transparent 55%),
+    radial-gradient(80% 50% at 0% 100%, rgba(234, 88, 12, 0.14), transparent 50%),
+    var(--app-bg);
 }
 
 .app-bg-games {
   background:
-    radial-gradient(120% 80% at 0% 0%, rgba(27, 40, 56, 0.2), transparent 58%),
-    radial-gradient(90% 65% at 100% 100%, rgba(102, 192, 244, 0.28), transparent 55%),
-    var(--tg-bg);
+    radial-gradient(120% 80% at 0% 0%, rgba(27, 40, 56, 0.35), transparent 58%),
+    radial-gradient(90% 65% at 100% 100%, rgba(102, 192, 244, 0.22), transparent 55%),
+    var(--app-bg);
 }
 
 .app-bg-stats {
   background:
-    radial-gradient(110% 75% at 100% 0%, rgba(14, 116, 144, 0.22), transparent 55%),
-    radial-gradient(90% 60% at 0% 100%, rgba(103, 232, 249, 0.2), transparent 50%),
-    var(--tg-bg);
+    radial-gradient(110% 75% at 100% 0%, rgba(14, 116, 144, 0.28), transparent 55%),
+    radial-gradient(90% 60% at 0% 100%, rgba(6, 182, 212, 0.16), transparent 50%),
+    var(--app-bg);
 }
 
 .app-bg-links {
   background:
-    radial-gradient(110% 75% at 0% 0%, rgba(101, 163, 13, 0.18), transparent 55%),
-    radial-gradient(90% 60% at 100% 100%, rgba(163, 230, 53, 0.2), transparent 50%),
-    var(--tg-bg);
+    radial-gradient(110% 75% at 0% 0%, rgba(101, 163, 13, 0.24), transparent 55%),
+    radial-gradient(90% 60% at 100% 100%, rgba(132, 204, 22, 0.14), transparent 50%),
+    var(--app-bg);
 }
 
 .app-orb {
@@ -186,10 +247,16 @@ textarea {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
+}
+
+[data-theme="dark"] .app-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
 .launcher-tile {

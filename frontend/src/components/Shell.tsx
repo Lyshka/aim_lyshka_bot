@@ -36,11 +36,8 @@ export function Shell<T extends string>({
         {children}
       </main>
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t px-3 pt-2"
+        className="app-nav fixed inset-x-0 bottom-0 z-50 border-t px-3 pt-2"
         style={{
-          background: 'color-mix(in srgb, var(--tg-secondary) 92%, white)',
-          backdropFilter: 'blur(12px)',
-          borderColor: 'color-mix(in srgb, var(--tg-hint) 25%, transparent)',
           paddingBottom: 'calc(10px + var(--safe-bottom))',
         }}
       >

@@ -27,18 +27,18 @@ const adminTabs: { id: AdminTab; label: string }[] = [
 
 const grantPalette = {
   yes: {
-    card: 'color-mix(in srgb, #16a34a 10%, white)',
+    card: 'color-mix(in srgb, #16a34a 14%, var(--app-surface))',
     badgeBg: '#dcfce7',
     badgeText: '#15803d',
     button: 'linear-gradient(145deg, #22c55e, #16a34a)',
     buttonText: '#fff',
   },
   no: {
-    card: 'var(--tg-bg)',
+    card: 'var(--app-surface)',
     badgeBg: '#fee2e2',
-    badgeText: '#b42318',
-    button: 'color-mix(in srgb, #b42318 14%, transparent)',
-    buttonText: '#b42318',
+    badgeText: 'var(--app-danger)',
+    button: 'color-mix(in srgb, var(--app-danger) 14%, transparent)',
+    buttonText: 'var(--app-danger)',
   },
 };
 
@@ -153,7 +153,7 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
             }}
             className="rounded-2xl px-3 py-2 text-sm font-medium"
             style={{
-              background: 'color-mix(in srgb, white 55%, var(--tg-secondary))',
+              background: 'color-mix(in srgb, var(--app-surface-muted) 55%, var(--tg-secondary))',
               backdropFilter: 'blur(8px)',
             }}
           >
@@ -174,7 +174,7 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
             <section
               className="space-y-3 rounded-[28px] px-5 py-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
               style={{
-                background: 'color-mix(in srgb, white 70%, var(--tg-secondary))',
+                background: 'color-mix(in srgb, var(--app-surface-muted) 70%, var(--tg-secondary))',
                 backdropFilter: 'blur(10px)',
               }}
             >
@@ -191,7 +191,7 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="80 или @username"
                   className="min-w-0 flex-1 rounded-2xl border-0 px-3 py-2.5 outline-none"
-                  style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+                  style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
                 />
                 <button
                   type="button"
@@ -266,7 +266,7 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
           <p
             className="mt-4 rounded-2xl px-4 py-3 text-sm"
             style={{
-              background: 'color-mix(in srgb, #0f766e 14%, transparent)',
+              background: 'color-mix(in srgb, var(--tg-button) 14%, transparent)',
             }}
           >
             {status}
@@ -277,7 +277,7 @@ export function AdminScreen({ onBack }: AdminScreenProps) {
       <nav
         className="fixed inset-x-0 bottom-0 z-50 border-t px-3 pt-2"
         style={{
-          background: 'color-mix(in srgb, var(--tg-secondary) 92%, white)',
+          background: 'color-mix(in srgb, var(--app-surface) 92%, transparent)',
           backdropFilter: 'blur(12px)',
           borderColor: 'color-mix(in srgb, var(--tg-hint) 25%, transparent)',
           paddingBottom: 'calc(10px + var(--safe-bottom))',
@@ -333,7 +333,7 @@ function UserGrantsCard({
     <article
       className="rounded-[28px] px-5 py-4 shadow-[0_12px_40px_rgba(15,23,42,0.05)]"
       style={{
-        background: 'color-mix(in srgb, white 72%, var(--tg-secondary))',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 72%, var(--tg-secondary))',
         backdropFilter: 'blur(10px)',
       }}
     >

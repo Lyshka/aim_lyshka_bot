@@ -274,7 +274,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
         }}
         className="rounded-2xl px-3 py-2 text-sm font-medium"
         style={{
-          background: 'color-mix(in srgb, white 55%, #65a30d)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 55%, #65a30d)',
         }}
       >
         ← Назад
@@ -295,8 +295,8 @@ export function LinksApp({ onBack }: LinksAppProps) {
         <p
           className="mb-3 rounded-2xl px-4 py-3 text-sm"
           style={{
-            background: 'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-            color: '#9f1239',
+            background: 'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+            color: 'var(--app-danger)',
           }}
         >
           {error}
@@ -446,7 +446,7 @@ function ListTab({
       <section
         className="space-y-3 rounded-3xl px-4 py-4"
         style={{
-          background: 'color-mix(in srgb, white 72%, #65a30d)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #65a30d)',
         }}
       >
         <input
@@ -454,7 +454,7 @@ function ListTab({
           onChange={(e) => setSectionTitle(e.target.value)}
           placeholder="Новый раздел, например DevOps"
           className="w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
-          style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+          style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               onCreateSection();
@@ -484,7 +484,7 @@ function ListTab({
           <p
             className="rounded-3xl px-4 py-5 text-sm"
             style={{
-              background: 'color-mix(in srgb, white 75%, #65a30d)',
+              background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #65a30d)',
               color: 'var(--tg-hint)',
             }}
           >
@@ -498,7 +498,7 @@ function ListTab({
                 key={section.id}
                 className="overflow-hidden rounded-3xl"
                 style={{
-                  background: 'color-mix(in srgb, white 75%, #65a30d)',
+                  background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #65a30d)',
                 }}
               >
                 <div className="flex items-start gap-2 px-4 py-3">
@@ -526,7 +526,7 @@ function ListTab({
                       setRenameValue(section.title);
                     }}
                     className="rounded-xl px-2.5 py-1.5 text-xs font-medium"
-                    style={{ background: 'var(--tg-secondary)' }}
+                    style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                   >
                     Имя
                   </button>
@@ -537,8 +537,8 @@ function ListTab({
                     className="rounded-xl px-2.5 py-1.5 text-xs font-medium"
                     style={{
                       background:
-                        'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-                      color: '#9f1239',
+                        'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+                      color: 'var(--app-danger)',
                     }}
                   >
                     Удалить
@@ -552,7 +552,7 @@ function ListTab({
                       onChange={(e) => setRenameValue(e.target.value)}
                       className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                       style={{
-                        background: 'var(--tg-bg)',
+                        background: 'var(--app-surface)',
                         color: 'var(--tg-text)',
                       }}
                       onKeyDown={(e) => {
@@ -578,7 +578,7 @@ function ListTab({
                         type="button"
                         onClick={() => setRenamingId(null)}
                         className="rounded-xl px-3 py-2 text-sm"
-                        style={{ background: 'var(--tg-secondary)' }}
+                        style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                       >
                         Отмена
                       </button>
@@ -597,7 +597,7 @@ function ListTab({
                         <article
                           key={item.id}
                           className="rounded-2xl px-3 py-3"
-                          style={{ background: 'var(--tg-bg)' }}
+                          style={{ background: 'var(--app-surface)' }}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
@@ -620,8 +620,8 @@ function ListTab({
                               className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium"
                               style={{
                                 background:
-                                  'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
-                                color: '#9f1239',
+                                  'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
+                                color: 'var(--app-danger)',
                               }}
                             >
                               Удалить тему
@@ -645,8 +645,8 @@ function ListTab({
                                     type="button"
                                     className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
                                     style={{
-                                      background: 'var(--tg-secondary)',
-                                      color: '#3f6212',
+                                      background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                      color: 'var(--app-link)',
                                     }}
                                     onClick={() => {
                                       haptic('light');
@@ -662,8 +662,8 @@ function ListTab({
                                     className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
                                     style={{
                                       background:
-                                        'color-mix(in srgb, #b42318 10%, var(--tg-secondary))',
-                                      color: '#9f1239',
+                                        'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
+                                      color: 'var(--app-danger)',
                                     }}
                                   >
                                     ×
@@ -680,7 +680,7 @@ function ListTab({
                                 onChange={(e) => setExtraUrl(e.target.value)}
                                 placeholder="https://example.com"
                                 className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                                style={{ background: 'var(--tg-secondary)' }}
+                                style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                               />
                               <input
                                 value={extraUrlTitle}
@@ -689,7 +689,7 @@ function ListTab({
                                 }
                                 placeholder="Название ссылки (необязательно)"
                                 className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                                style={{ background: 'var(--tg-secondary)' }}
+                                style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                               />
                               <div className="flex gap-2">
                                 <button
@@ -712,7 +712,7 @@ function ListTab({
                                     setExtraUrlTitle('');
                                   }}
                                   className="rounded-xl px-3 py-2 text-sm"
-                                  style={{ background: 'var(--tg-secondary)' }}
+                                  style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                                 >
                                   Отмена
                                 </button>
@@ -731,8 +731,8 @@ function ListTab({
                               }}
                               className="mt-2 w-full rounded-xl px-3 py-2 text-xs font-semibold"
                               style={{
-                                background: 'var(--tg-secondary)',
-                                color: '#3f6212',
+                                background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                color: 'var(--app-link)',
                               }}
                             >
                               + Ссылка
@@ -745,28 +745,28 @@ function ListTab({
                     {addingItemFor === section.id ? (
                       <div
                         className="space-y-2 rounded-2xl px-3 py-3"
-                        style={{ background: 'var(--tg-bg)' }}
+                        style={{ background: 'var(--app-surface)' }}
                       >
                         <input
                           value={itemTitle}
                           onChange={(e) => setItemTitle(e.target.value)}
                           placeholder="Название темы, например Docker"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                          style={{ background: 'var(--tg-secondary)' }}
+                          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
                         <input
                           value={itemUrl}
                           onChange={(e) => setItemUrl(e.target.value)}
                           placeholder="Ссылка (необязательно)"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                          style={{ background: 'var(--tg-secondary)' }}
+                          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
                         <input
                           value={itemUrlTitle}
                           onChange={(e) => setItemUrlTitle(e.target.value)}
                           placeholder="Название ссылки (необязательно)"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                          style={{ background: 'var(--tg-secondary)' }}
+                          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
                         <div className="flex gap-2">
                           <button
@@ -790,7 +790,7 @@ function ListTab({
                               setItemUrlTitle('');
                             }}
                             className="rounded-xl px-3 py-2 text-sm"
-                            style={{ background: 'var(--tg-secondary)' }}
+                            style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                           >
                             Отмена
                           </button>
@@ -861,7 +861,7 @@ function TrashTab({
       <div
         className="rounded-3xl px-5 py-8 text-center"
         style={{
-          background: 'color-mix(in srgb, white 75%, #65a30d)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #65a30d)',
         }}
       >
         <p className="font-display text-lg font-semibold">Корзина пуста</p>
@@ -877,7 +877,7 @@ function TrashTab({
       <div
         className="flex items-center justify-between gap-3 rounded-3xl px-4 py-3"
         style={{
-          background: 'color-mix(in srgb, white 72%, #65a30d)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #65a30d)',
         }}
       >
         <p className="text-sm font-semibold">{trashCount} в корзине</p>
@@ -890,8 +890,8 @@ function TrashTab({
           }}
           className="rounded-2xl px-3 py-2 text-xs font-semibold disabled:opacity-50"
           style={{
-            background: 'color-mix(in srgb, #b42318 14%, var(--tg-secondary))',
-            color: '#9f1239',
+            background: 'color-mix(in srgb, var(--app-danger) 14%, var(--tg-secondary))',
+            color: 'var(--app-danger)',
           }}
         >
           Очистить
@@ -982,7 +982,7 @@ function TrashCard({
     <article
       className="flex items-center gap-3 rounded-3xl px-4 py-3"
       style={{
-        background: 'color-mix(in srgb, white 75%, #65a30d)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #65a30d)',
       }}
     >
       <div className="min-w-0 flex-1">

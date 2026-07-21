@@ -226,7 +226,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
           }}
           className="rounded-2xl px-3 py-2 text-sm font-medium"
           style={{
-            background: 'color-mix(in srgb, white 50%, #66c0f4)',
+            background: 'color-mix(in srgb, var(--app-surface-muted) 50%, #66c0f4)',
           }}
         >
           ← Назад
@@ -250,8 +250,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
                 className="rounded-3xl px-5 py-4 text-sm"
                 style={{
                   background:
-                    'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-                  color: '#9f1239',
+                    'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+                  color: 'var(--app-danger)',
                 }}
               >
                 На сервере не задан STEAM_API_KEY. Админ должен добавить ключ в
@@ -339,7 +339,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <section
                 className="space-y-3 rounded-3xl px-5 py-4"
                 style={{
-                  background: 'color-mix(in srgb, white 70%, #1b2838)',
+                  background: 'color-mix(in srgb, var(--app-surface-muted) 70%, #1b2838)',
                 }}
               >
                 <p className="text-sm font-medium">
@@ -354,7 +354,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
                   onChange={(e) => setSteamInput(e.target.value)}
                   placeholder="https://steamcommunity.com/id/ник"
                   className="w-full rounded-xl border-0 px-3 py-2.5 outline-none"
-                  style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+                  style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
                 />
                 <div className="flex gap-2">
                   <button
@@ -407,7 +407,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <div
                 className="flex items-center gap-3 rounded-2xl px-3 py-2"
                 style={{
-                  background: 'color-mix(in srgb, white 70%, #1b2838)',
+                  background: 'color-mix(in srgb, var(--app-surface-muted) 70%, #1b2838)',
                 }}
               >
                 <AccountAvatar profile={data.profile} />
@@ -478,7 +478,7 @@ export function GamesApp({ onBack }: GamesAppProps) {
               <div
                 className="flex items-center gap-3 rounded-2xl px-3 py-2"
                 style={{
-                  background: 'color-mix(in srgb, white 70%, #1b2838)',
+                  background: 'color-mix(in srgb, var(--app-surface-muted) 70%, #1b2838)',
                 }}
               >
                 <AccountAvatar profile={data.profile} />
@@ -507,8 +507,8 @@ export function GamesApp({ onBack }: GamesAppProps) {
                 className="rounded-3xl px-5 py-4 text-sm"
                 style={{
                   background:
-                    'color-mix(in srgb, #b42318 12%, var(--tg-secondary))',
-                  color: '#9f1239',
+                    'color-mix(in srgb, var(--app-danger) 12%, var(--tg-secondary))',
+                  color: 'var(--app-danger)',
                 }}
               >
                 Инвентарь скрыт в настройках Steam. Сделай профиль и инвентарь
@@ -554,7 +554,7 @@ function SubTabButton({
       className="rounded-xl px-3 py-2.5 text-xs font-semibold transition"
       style={{
         background: active
-          ? `color-mix(in srgb, ${accent} 18%, white)`
+          ? `color-mix(in srgb, ${accent} 18%, var(--app-surface))`
           : 'transparent',
         color: active ? accent : 'var(--tg-hint)',
         boxShadow: active ? `inset 0 0 0 1px ${accent}` : 'none',
@@ -626,8 +626,8 @@ function AccountCard({
       className="rounded-[24px] px-3 py-3"
       style={{
         background: profile.active
-          ? 'color-mix(in srgb, #66c0f4 22%, white)'
-          : 'color-mix(in srgb, white 70%, #1b2838)',
+          ? 'color-mix(in srgb, #66c0f4 22%, var(--app-surface))'
+          : 'color-mix(in srgb, var(--app-surface-muted) 70%, #1b2838)',
         outline: profile.active ? '2px solid #66c0f4' : 'none',
       }}
     >
@@ -661,11 +661,11 @@ function AccountCard({
       <div
         className="mt-2 rounded-xl px-3 py-2"
         style={{
-          background: 'color-mix(in srgb, white 55%, transparent)',
+          background: 'color-mix(in srgb, var(--app-surface-muted) 55%, transparent)',
         }}
       >
         {profile.inventoryHidden ? (
-          <p className="text-xs font-medium" style={{ color: '#b42318' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--app-danger)' }}>
             Инвентарь скрыт
           </p>
         ) : (
@@ -686,8 +686,8 @@ function AccountCard({
         onClick={onDelete}
         className="mt-2 w-full rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
         style={{
-          background: 'color-mix(in srgb, #b42318 14%, transparent)',
-          color: '#b42318',
+          background: 'color-mix(in srgb, var(--app-danger) 14%, transparent)',
+          color: 'var(--app-danger)',
         }}
       >
         Удалить аккаунт
@@ -709,7 +709,7 @@ function MiniStat({
     <div
       className="rounded-xl px-2 py-2 text-center"
       style={{
-        background: 'color-mix(in srgb, white 55%, transparent)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 55%, transparent)',
       }}
     >
       <p
@@ -741,7 +741,7 @@ function StatCard({
     <div
       className="rounded-[24px] px-3 py-4 text-center"
       style={{
-        background: 'color-mix(in srgb, white 72%, #66c0f4)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #66c0f4)',
       }}
     >
       <p
@@ -807,7 +807,7 @@ function GameCard({
       rel="noreferrer"
       className="flex gap-3 overflow-hidden rounded-[24px] p-2 pr-3"
       style={{
-        background: 'color-mix(in srgb, white 75%, #1b2838)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 75%, #1b2838)',
       }}
     >
       <SteamCover src={game.imageUrl || undefined} />
@@ -895,7 +895,7 @@ function FilterSelect({
         onChange={(e) => onChange(e.target.value)}
         className="w-full appearance-none rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
         style={{
-          background: 'var(--tg-bg)',
+          background: 'var(--app-surface)',
           color: 'var(--tg-text)',
           boxShadow:
             'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
@@ -1088,7 +1088,7 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
           placeholder="Найти скин…"
           className="min-w-0 flex-1 rounded-2xl border-0 px-4 py-3 text-sm outline-none"
           style={{
-            background: 'var(--tg-bg)',
+            background: 'var(--app-surface)',
             color: 'var(--tg-text)',
             boxShadow:
               'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
@@ -1101,7 +1101,7 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
           style={{
             background: filtersOpen
               ? 'linear-gradient(145deg, #1b2838, #2a475e)'
-              : 'var(--tg-bg)',
+              : 'var(--app-surface)',
             color: filtersOpen ? '#c7d5e0' : 'var(--tg-text)',
             boxShadow:
               'inset 0 0 0 1px color-mix(in srgb, #66c0f4 28%, transparent)',
@@ -1120,7 +1120,7 @@ function InventoryPanel({ items }: { items: InventoryItem[] }) {
       </div>
 
       {filtersOpen ? (
-        <div className="space-y-3 rounded-2xl p-3" style={{ background: 'var(--tg-bg)' }}>
+        <div className="space-y-3 rounded-2xl p-3" style={{ background: 'var(--app-surface)' }}>
           <div className="grid grid-cols-2 gap-2.5">
             <FilterSelect
               label="Сортировка"

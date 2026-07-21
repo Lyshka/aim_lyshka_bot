@@ -100,7 +100,7 @@ export function HomeScreen() {
 
   if (error && !data) {
     return (
-      <div className="rounded-3xl px-5 py-5" style={{ background: 'var(--tg-secondary)' }}>
+      <div className="rounded-3xl px-5 py-5" style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}>
         {error}
       </div>
     );
@@ -125,14 +125,14 @@ export function HomeScreen() {
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(145deg, color-mix(in srgb, #0f766e 18%, var(--tg-secondary)), var(--tg-secondary))',
+              'linear-gradient(145deg, color-mix(in srgb, var(--tg-button) 24%, var(--app-surface-muted)), var(--app-surface))',
           }}
         />
         <div className="absolute -top-8 -right-6 h-28 w-28 rounded-full bg-teal-500/15 blur-2xl" />
         <div className="relative">
           <p
             className="font-display text-xs tracking-[0.2em] uppercase"
-            style={{ color: '#0f766e' }}
+            style={{ color: 'var(--tg-button)' }}
           >
             Таблетки
           </p>
@@ -151,7 +151,7 @@ export function HomeScreen() {
             className="mt-4 rounded-2xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
             style={{
               background: mutedToday
-                ? 'color-mix(in srgb, #0f766e 22%, white)'
+                ? 'color-mix(in srgb, var(--tg-button) 22%, var(--app-surface))'
                 : 'color-mix(in srgb, var(--tg-hint) 14%, transparent)',
               color: 'var(--tg-text)',
             }}
@@ -209,7 +209,10 @@ function MedCard({
   return (
     <article
       className="rounded-3xl px-5 py-4"
-      style={{ background: 'var(--tg-secondary)' }}
+      style={{
+        background: 'color-mix(in srgb, var(--app-surface-muted) 45%, var(--app-surface))',
+        boxShadow: 'inset 0 0 0 1px var(--app-border)',
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div>

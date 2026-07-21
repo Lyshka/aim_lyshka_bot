@@ -80,7 +80,7 @@ function AppContent() {
           </p>
           <p
             className="rounded-2xl px-4 py-3 text-sm"
-            style={{ background: 'var(--tg-secondary)' }}
+            style={{ background: 'var(--app-surface)' }}
           >
             {error ?? 'Нет данных пользователя'}
           </p>

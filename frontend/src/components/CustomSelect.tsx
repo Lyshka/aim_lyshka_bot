@@ -46,8 +46,7 @@ export function CustomSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="relative mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left"
-        style={{ background: 'var(--tg-bg)' }}
+        className="app-input relative mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left"
       >
         <span className="font-medium">{selected?.label}</span>
         <span
@@ -63,10 +62,9 @@ export function CustomSelect({
 
       {open ? (
         <div
-          className="mt-2 overflow-hidden rounded-2xl shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+          className="app-surface mt-2 overflow-hidden rounded-2xl shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
           style={{
-            background: 'var(--tg-bg)',
-            border: '1px solid color-mix(in srgb, var(--tg-hint) 16%, transparent)',
+            border: '1px solid var(--app-border)',
           }}
         >
           {options.map((option) => {

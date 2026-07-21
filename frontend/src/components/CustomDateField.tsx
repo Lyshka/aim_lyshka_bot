@@ -46,8 +46,7 @@ export function CustomDateField({
       <button
         type="button"
         onClick={openPicker}
-        className="relative mt-1 flex w-full items-center justify-between overflow-hidden rounded-2xl px-3 py-3 text-left"
-        style={{ background: 'var(--tg-bg)' }}
+        className="app-input relative mt-1 flex w-full items-center justify-between overflow-hidden rounded-2xl px-3 py-3 text-left"
       >
         <span className="font-medium">{formatDisplay(value)}</span>
         <span

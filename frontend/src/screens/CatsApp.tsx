@@ -159,7 +159,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
           }}
           className="rounded-2xl px-3 py-2 text-sm font-medium"
           style={{
-            background: 'color-mix(in srgb, white 60%, #fdba74)',
+            background: 'color-mix(in srgb, var(--app-surface-muted) 60%, #fdba74)',
             backdropFilter: 'blur(8px)',
           }}
         >
@@ -200,7 +200,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
             <section
               className="space-y-3 rounded-3xl px-5 py-4"
               style={{
-                background: 'color-mix(in srgb, white 72%, #ffedd5)',
+                background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #ffedd5)',
               }}
             >
               <div>
@@ -221,7 +221,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
                   disabled={!feed.settings.canChangeTime || timeBusy}
                   onChange={(e) => setTimeValue(e.target.value)}
                   className="mt-1 w-full rounded-xl border-0 px-3 py-2 outline-none disabled:opacity-50"
-                  style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+                  style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
                 />
               </label>
               <button
@@ -262,7 +262,7 @@ export function CatsApp({ onBack }: CatsAppProps) {
                 setAppliedFrom('');
                 setAppliedTo('');
               }}
-              background="color-mix(in srgb, white 72%, #ffedd5)"
+              background="color-mix(in srgb, var(--app-surface-muted) 72%, #ffedd5)"
             />
 
             {historyItems.length === 0 ? (
@@ -288,7 +288,7 @@ function HistoryCard({ post }: { post: CatPost }) {
     <article
       className="flex gap-3 overflow-hidden rounded-[24px] p-2 pr-3"
       style={{
-        background: 'color-mix(in srgb, white 72%, #ffedd5)',
+        background: 'color-mix(in srgb, var(--app-surface-muted) 72%, #ffedd5)',
         backdropFilter: 'blur(8px)',
       }}
     >
