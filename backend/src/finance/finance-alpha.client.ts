@@ -1,4 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import * as https from 'https';
+import { URL } from 'url';
 import {
   BadRequestException,
   Injectable,
@@ -33,8 +35,58 @@ type AlphaClientConfig = {
   redirectUri: string;
 };
 
+type AlphaHttpResult = {
+  status: number;
+  text: string;
+};
+
 function roundAmount(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function alphaHttpsRequest(
+  targetUrl: string,
+  options: {
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+    timeoutMs?: number;
+  },
+): Promise<AlphaHttpResult> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(targetUrl);
+    const req = https.request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: `${url.pathname}${url.search}`,
+        method: options.method,
+        headers: options.headers,
+        rejectUnauthorized: false,
+        servername: url.hostname,
+        timeout: options.timeoutMs ?? 20000,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            text: Buffer.concat(chunks).toString('utf8'),
+          });
+        });
+      },
+    );
+    req.on('timeout', () => {
+      req.destroy(new Error(`Timeout ${url.hostname}:${url.port || 443}`));
+    });
+    req.on('error', reject);
+    if (options.body) {
+      req.write(options.body);
+    }
+    req.end();
+  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -231,44 +283,59 @@ export class FinanceAlphaClient {
     const path = config.accountsPath.startsWith('/')
       ? config.accountsPath
       : `/${config.accountsPath}`;
-    const url = `${config.apiBase.replace(/\/$/, '')}${path}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-      },
-    });
-    const text = await response.text();
-    let payload: unknown = null;
-    if (text) {
+    const urls = [
+      `${config.apiBase.replace(/\/$/, '')}${path}`,
+      `${config.oauthBase.replace(/\/$/, '')}${path}`,
+    ];
+
+    let lastError = 'Не удалось получить счета Альфа-Банка';
+    for (const url of urls) {
       try {
-        payload = JSON.parse(text);
-      } catch {
-        throw new ServiceUnavailableException(
-          'Альфа-Банк вернул некорректный ответ',
-        );
+        const response = await alphaHttpsRequest(url, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json',
+          },
+          timeoutMs: 20000,
+        });
+        let payload: unknown = null;
+        if (response.text) {
+          try {
+            payload = JSON.parse(response.text);
+          } catch {
+            lastError = `Некорректный ответ банка (${url})`;
+            continue;
+          }
+        }
+        if (response.status < 200 || response.status >= 300) {
+          const message =
+            typeof payload === 'object' &&
+            payload &&
+            'message' in payload &&
+            typeof (payload as { message?: unknown }).message === 'string'
+              ? (payload as { message: string }).message
+              : `HTTP ${response.status}`;
+          lastError = message;
+          continue;
+        }
+
+        const products: AlphaFinanceProduct[] = [];
+        collectProducts(payload, products);
+        const dedup = new Map<string, AlphaFinanceProduct>();
+        for (const product of products) {
+          dedup.set(`${product.id}:${product.currency}`, product);
+        }
+        return [...dedup.values()];
+      } catch (err) {
+        lastError =
+          err instanceof Error
+            ? `Сеть: ${err.message}`
+            : 'Сеть: ошибка запроса счетов';
       }
     }
-    if (!response.ok) {
-      const message =
-        typeof payload === 'object' &&
-        payload &&
-        'message' in payload &&
-        typeof (payload as { message?: unknown }).message === 'string'
-          ? (payload as { message: string }).message
-          : `HTTP ${response.status}`;
-      throw new ServiceUnavailableException(message);
-    }
 
-    const products: AlphaFinanceProduct[] = [];
-    collectProducts(payload, products);
-
-    const dedup = new Map<string, AlphaFinanceProduct>();
-    for (const product of products) {
-      dedup.set(`${product.id}:${product.currency}`, product);
-    }
-    return [...dedup.values()];
+    throw new ServiceUnavailableException(lastError);
   }
 
   signState(userId: number) {
@@ -377,9 +444,7 @@ export class FinanceAlphaClient {
     const tokenUrls = [
       this.configService.get<string>('ALPHA_TOKEN_URL')?.trim(),
       `${config.oauthBase.replace(/\/$/, '')}/token`,
-      `${config.apiBase.replace(/\/$/, '')}/token`,
       `${config.oauthBase.replace(/\/$/, '')}/oauth/token`,
-      `${config.apiBase.replace(/\/$/, '')}/oauth/token`,
     ].filter((value, index, list): value is string =>
       Boolean(value) && list.indexOf(value) === index,
     );
@@ -387,62 +452,76 @@ export class FinanceAlphaClient {
     const auth = Buffer.from(
       `${config.clientId}:${config.clientSecret}`,
     ).toString('base64');
+    const payloadBody = body.toString();
 
     let lastError = 'Не удалось получить токен Альфа-Банка';
 
     for (const tokenUrl of tokenUrls) {
-      try {
-        const response = await fetch(tokenUrl, {
-          method: 'POST',
+      const variants: Array<{ headers: Record<string, string> }> = [
+        {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Accept: 'application/json',
             Authorization: `Basic ${auth}`,
           },
-          body,
-        });
-        const text = await response.text();
-        let payload: unknown = null;
-        if (text) {
-          try {
-            payload = JSON.parse(text);
-          } catch {
-            lastError = `Некорректный ответ токена (${tokenUrl})`;
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+          },
+        },
+      ];
+
+      for (const variant of variants) {
+        try {
+          const response = await alphaHttpsRequest(tokenUrl, {
+            method: 'POST',
+            headers: {
+              ...variant.headers,
+              'Content-Length': Buffer.byteLength(payloadBody).toString(),
+            },
+            body: payloadBody,
+            timeoutMs: 20000,
+          });
+          let payload: unknown = null;
+          if (response.text) {
+            try {
+              payload = JSON.parse(response.text);
+            } catch {
+              lastError = `Некорректный ответ токена (${tokenUrl})`;
+              continue;
+            }
+          }
+          if (response.status < 200 || response.status >= 300) {
+            const message =
+              typeof payload === 'object' &&
+              payload &&
+              'error_description' in payload &&
+              typeof (payload as { error_description?: unknown })
+                .error_description === 'string'
+                ? (payload as { error_description: string }).error_description
+                : typeof payload === 'object' &&
+                    payload &&
+                    'error' in payload &&
+                    typeof (payload as { error?: unknown }).error === 'string'
+                  ? (payload as { error: string }).error
+                  : `HTTP ${response.status}`;
+            lastError = `${message} (${tokenUrl})`;
             continue;
           }
+          const token = payload as AlphaTokenResponse;
+          if (!token.access_token) {
+            lastError = 'Альфа-Банк не вернул access_token';
+            continue;
+          }
+          return token;
+        } catch (err) {
+          lastError =
+            err instanceof Error
+              ? `Сеть: ${err.message}`
+              : 'Сеть: ошибка запроса токена';
         }
-        if (!response.ok) {
-          const message =
-            typeof payload === 'object' &&
-            payload &&
-            'error_description' in payload &&
-            typeof (payload as { error_description?: unknown }).error_description ===
-              'string'
-              ? (payload as { error_description: string }).error_description
-              : typeof payload === 'object' &&
-                  payload &&
-                  'error' in payload &&
-                  typeof (payload as { error?: unknown }).error === 'string'
-                ? (payload as { error: string }).error
-                : `HTTP ${response.status}`;
-          lastError = message;
-          continue;
-        }
-        const token = payload as AlphaTokenResponse;
-        if (!token.access_token) {
-          lastError = 'Альфа-Банк не вернул access_token';
-          continue;
-        }
-        return token;
-      } catch (err) {
-        const cause =
-          err instanceof Error
-            ? ((err as Error & { cause?: { message?: string; code?: string } })
-                .cause?.message ??
-              (err as Error & { cause?: { code?: string } }).cause?.code ??
-              err.message)
-            : 'network error';
-        lastError = `Сеть: ${cause}`;
       }
     }
 
