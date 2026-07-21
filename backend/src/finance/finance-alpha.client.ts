@@ -374,46 +374,79 @@ export class FinanceAlphaClient {
     config: AlphaClientConfig,
     body: URLSearchParams,
   ): Promise<AlphaTokenResponse> {
-    const response = await fetch(
+    const tokenUrls = [
+      this.configService.get<string>('ALPHA_TOKEN_URL')?.trim(),
       `${config.oauthBase.replace(/\/$/, '')}/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
-        },
-        body,
-      },
+      `${config.apiBase.replace(/\/$/, '')}/token`,
+      `${config.oauthBase.replace(/\/$/, '')}/oauth/token`,
+      `${config.apiBase.replace(/\/$/, '')}/oauth/token`,
+    ].filter((value, index, list): value is string =>
+      Boolean(value) && list.indexOf(value) === index,
     );
-    const text = await response.text();
-    let payload: unknown = null;
-    if (text) {
+
+    const auth = Buffer.from(
+      `${config.clientId}:${config.clientSecret}`,
+    ).toString('base64');
+
+    let lastError = 'Не удалось получить токен Альфа-Банка';
+
+    for (const tokenUrl of tokenUrls) {
       try {
-        payload = JSON.parse(text);
-      } catch {
-        throw new ServiceUnavailableException(
-          'Не удалось получить токен Альфа-Банка',
-        );
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+            Authorization: `Basic ${auth}`,
+          },
+          body,
+        });
+        const text = await response.text();
+        let payload: unknown = null;
+        if (text) {
+          try {
+            payload = JSON.parse(text);
+          } catch {
+            lastError = `Некорректный ответ токена (${tokenUrl})`;
+            continue;
+          }
+        }
+        if (!response.ok) {
+          const message =
+            typeof payload === 'object' &&
+            payload &&
+            'error_description' in payload &&
+            typeof (payload as { error_description?: unknown }).error_description ===
+              'string'
+              ? (payload as { error_description: string }).error_description
+              : typeof payload === 'object' &&
+                  payload &&
+                  'error' in payload &&
+                  typeof (payload as { error?: unknown }).error === 'string'
+                ? (payload as { error: string }).error
+                : `HTTP ${response.status}`;
+          lastError = message;
+          continue;
+        }
+        const token = payload as AlphaTokenResponse;
+        if (!token.access_token) {
+          lastError = 'Альфа-Банк не вернул access_token';
+          continue;
+        }
+        return token;
+      } catch (err) {
+        const cause =
+          err instanceof Error
+            ? ((err as Error & { cause?: { message?: string; code?: string } })
+                .cause?.message ??
+              (err as Error & { cause?: { code?: string } }).cause?.code ??
+              err.message)
+            : 'network error';
+        lastError = `Сеть: ${cause}`;
       }
     }
-    if (!response.ok) {
-      const message =
-        typeof payload === 'object' &&
-        payload &&
-        'error_description' in payload &&
-        typeof (payload as { error_description?: unknown }).error_description ===
-          'string'
-          ? (payload as { error_description: string }).error_description
-          : `HTTP ${response.status}`;
-      throw new ServiceUnavailableException(message);
-    }
-    const token = payload as AlphaTokenResponse;
-    if (!token.access_token) {
-      throw new ServiceUnavailableException(
-        'Альфа-Банк не вернул access_token',
-      );
-    }
-    return token;
+
+    throw new ServiceUnavailableException(lastError);
   }
 }
 

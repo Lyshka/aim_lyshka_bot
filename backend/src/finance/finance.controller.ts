@@ -52,19 +52,29 @@ export class FinanceController {
     @Res() res: Response,
   ) {
     if (error) {
-      const url = this.financeService.buildAlphaReturnUrl(
-        false,
-        errorDescription ?? error,
-      );
-      return res.redirect(url);
+      return res
+        .status(200)
+        .type('html')
+        .send(
+          this.financeService.buildAlphaResultPage(
+            false,
+            errorDescription ?? error,
+          ),
+        );
     }
 
     try {
       await this.financeService.alphaCallback(code, state);
-      return res.redirect(this.financeService.buildAlphaReturnUrl(true));
+      return res
+        .status(200)
+        .type('html')
+        .send(this.financeService.buildAlphaResultPage(true));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка авторизации';
-      return res.redirect(this.financeService.buildAlphaReturnUrl(false, message));
+      return res
+        .status(200)
+        .type('html')
+        .send(this.financeService.buildAlphaResultPage(false, message));
     }
   }
 

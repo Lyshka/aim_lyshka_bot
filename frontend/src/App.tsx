@@ -47,6 +47,14 @@ function AppContent() {
   const [activeApp, setActiveApp] = useState<PlatformApp | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const variant = backgroundVariant(activeApp);
+  const alphaStatus =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('alpha')
+      : null;
+  const alphaMessage =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('alphaMessage')
+      : null;
 
   useEffect(() => {
     if (!ready || !user || deepLinkHandled || !startAppSlug) {
@@ -68,6 +76,29 @@ function AppContent() {
           style={{ color: 'var(--tg-hint)' }}
         >
           Загрузка...
+        </div>
+      </>
+    );
+  }
+
+  if (alphaStatus && (error || !user)) {
+    const ok = alphaStatus === 'connected';
+    return (
+      <>
+        <AppBackground variant="finance" />
+        <div className="relative z-[1] mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center gap-3 px-6">
+          <h1
+            className="font-display text-2xl font-semibold"
+            style={{ color: ok ? 'var(--app-link)' : 'var(--app-danger)' }}
+          >
+            {ok ? 'Альфа-Банк подключён' : 'Не удалось подключить'}
+          </h1>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--tg-hint)' }}>
+            {ok
+              ? 'Закрой вкладку и открой lyshka-service через кнопку бота в Telegram → Финансы.'
+              : alphaMessage ??
+                'Закрой вкладку и попробуй снова из приложения в Telegram.'}
+          </p>
         </div>
       </>
     );

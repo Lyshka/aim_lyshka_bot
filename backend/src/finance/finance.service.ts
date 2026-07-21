@@ -4,8 +4,6 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { readFileSync, existsSync } from 'fs';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   aggregateProductsByCurrency,
@@ -99,7 +97,6 @@ export class FinanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alphaClient: FinanceAlphaClient,
-    private readonly configService: ConfigService,
   ) {}
 
   private uid(userId: number) {
@@ -269,17 +266,41 @@ export class FinanceService {
   }
 
   buildAlphaReturnUrl(success: boolean, message?: string) {
-    const webapp = this.readWebAppUrl();
-    if (!webapp) {
-      return success ? '/?app=finance' : '/?app=finance&alpha=error';
-    }
-    const url = new URL(webapp);
+    const url = new URL('http://169.58.29.177:8080/');
     url.searchParams.set('app', 'finance');
     url.searchParams.set('alpha', success ? 'connected' : 'error');
     if (message) {
       url.searchParams.set('alphaMessage', message.slice(0, 180));
     }
     return url.toString();
+  }
+
+  buildAlphaResultPage(success: boolean, message?: string) {
+    const title = success ? 'Альфа-Банк подключён' : 'Не удалось подключить';
+    const detail = success
+      ? 'Можно закрыть эту вкладку и вернуться в Telegram → lyshka-service → Финансы.'
+      : message?.trim() || 'Попробуй подключить ещё раз из приложения в Telegram.';
+    const color = success ? '#1f6f5b' : '#9f1239';
+    return `<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title}</title>
+  <style>
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Manrope,system-ui,sans-serif;background:#dfe6ee;color:#0f172a;padding:24px}
+    .card{max-width:420px;width:100%;background:#fff;border-radius:24px;padding:28px;box-shadow:0 10px 30px rgba(15,23,42,.08)}
+    h1{margin:0 0 12px;font-size:24px;color:${color}}
+    p{margin:0;line-height:1.5;color:#5f6f82;font-size:15px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>${title}</h1>
+    <p>${detail.replace(/</g, '&lt;')}</p>
+  </div>
+</body>
+</html>`;
   }
 
   async setCash(userId: number, currencyRaw: string, amount: number) {
@@ -589,22 +610,6 @@ export class FinanceService {
         currency: { notIn: [...currencies] },
       },
     });
-  }
-
-  private readWebAppUrl(): string | null {
-    const filePath = this.configService.get<string>('WEBAPP_URL_FILE');
-    if (filePath && existsSync(filePath)) {
-      try {
-        const value = readFileSync(filePath, 'utf8').trim();
-        if (value) {
-          return value.replace(/\/$/, '');
-        }
-      } catch {
-        //
-      }
-    }
-    const fromEnv = this.configService.get<string>('WEBAPP_URL')?.trim();
-    return fromEnv ? fromEnv.replace(/\/$/, '') : null;
   }
 
   private async findDebt(userId: number, debtId: string) {
