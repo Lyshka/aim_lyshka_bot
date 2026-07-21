@@ -25,6 +25,10 @@ model User {
   steamGames   SteamWishlistGame[]
   studySections StudySection[]
   studyItems    StudyItem[]
+  financeAccounts FinanceAccount[]
+  financeCash     FinanceCash[]
+  financeDebts    FinanceDebt[]
+  financeProviders FinanceProviderConnection[]
 }
 
 model App {
@@ -247,4 +251,78 @@ model StudyItemUrl {
 
   @@index([itemId, sortOrder])
   @@index([itemId, deletedAt])
+}
+
+model FinanceAccount {
+  id        String                  @id @default(cuid())
+  userId    BigInt
+  key       String?
+  name      String
+  sortOrder Int                     @default(0)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances  FinanceAccountBalance[]
+
+  @@unique([userId, key])
+  @@index([userId, sortOrder])
+}
+
+model FinanceAccountBalance {
+  id        String         @id @default(cuid())
+  accountId String
+  currency  String
+  amount    Float          @default(0)
+  updatedAt DateTime       @updatedAt
+  account   FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, currency])
+  @@index([accountId])
+}
+
+model FinanceCash {
+  id        String   @id @default(cuid())
+  userId    BigInt
+  currency  String
+  amount    Float    @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, currency])
+  @@index([userId])
+}
+
+model FinanceDebt {
+  id         String   @id @default(cuid())
+  userId     BigInt
+  personName String
+  amount     Float
+  currency   String   @default("BYN")
+  direction  String
+  note       String   @default("")
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sortOrder])
+}
+
+model FinanceProviderConnection {
+  id            String    @id @default(cuid())
+  userId        BigInt
+  provider      String
+  accessToken   String
+  refreshToken  String?
+  expiresAt     DateTime?
+  scope         String    @default("")
+  productsJson  String    @default("[]")
+  lastSyncAt    DateTime?
+  lastSyncError String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }

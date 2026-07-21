@@ -449,6 +449,66 @@ export type StudyTrash = {
   urls: StudyTrashUrl[];
 };
 
+export type FinanceAccount = {
+  id: string;
+  key: string | null;
+  name: string;
+  sortOrder: number;
+  isBuiltin: boolean;
+  balances: { currency: string; amount: number }[];
+};
+
+export type FinanceDebt = {
+  id: string;
+  personName: string;
+  amount: number;
+  currency: string;
+  direction: 'i_owe' | 'owed_to_me';
+  note: string;
+  sortOrder: number;
+};
+
+export type FinanceTotal = {
+  currency: string;
+  accountsTotal: number;
+  cashTotal: number;
+  grandTotal: number;
+};
+
+export type FinanceProviderProduct = {
+  id: string;
+  name: string;
+  type: string;
+  currency: string;
+  amount: number;
+  maskedNumber?: string | null;
+};
+
+export type FinanceProvider = {
+  key: 'alpha' | 'mellow' | 'prior';
+  name: string;
+  integrationReady: boolean;
+  connected: boolean;
+  lastSyncAt: string | null;
+  lastSyncError: string | null;
+  products: FinanceProviderProduct[];
+};
+
+export type FinanceOverview = {
+  accounts: FinanceAccount[];
+  cash: { currency: string; amount: number }[];
+  debts: FinanceDebt[];
+  totals: FinanceTotal[];
+  currencies: string[];
+  providers: FinanceProvider[];
+  alphaConfigured: boolean;
+};
+
+export type FinanceAlphaConnect = {
+  authUrl: string;
+  redirectUri: string;
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -600,6 +660,73 @@ export const api = {
     request<StudyTrash>('/api/study/trash/purge', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  financeOverview: (initData: string) =>
+    request<FinanceOverview>('/api/finance/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  financeAlphaConnect: (initData: string) =>
+    request<FinanceAlphaConnect>('/api/finance/alpha/connect', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  financeAlphaSync: (initData: string) =>
+    request<FinanceOverview>('/api/finance/alpha/sync', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  financeAlphaDisconnect: (initData: string) =>
+    request<FinanceOverview>('/api/finance/alpha/disconnect', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  financeSetCash: (
+    initData: string,
+    data: { currency: string; amount: number },
+  ) =>
+    request<FinanceOverview>('/api/finance/cash/set', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  financeDeleteCash: (initData: string, currency: string) =>
+    request<FinanceOverview>('/api/finance/cash/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, currency }),
+    }),
+  financeCreateDebt: (
+    initData: string,
+    data: {
+      personName: string;
+      amount: number;
+      currency: string;
+      direction: 'i_owe' | 'owed_to_me';
+      note?: string;
+    },
+  ) =>
+    request<FinanceOverview>('/api/finance/debts/create', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  financeUpdateDebt: (
+    initData: string,
+    data: {
+      debtId: string;
+      personName?: string;
+      amount?: number;
+      currency?: string;
+      direction?: 'i_owe' | 'owed_to_me';
+      note?: string;
+    },
+  ) =>
+    request<FinanceOverview>('/api/finance/debts/update', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  financeDeleteDebt: (initData: string, debtId: string) =>
+    request<FinanceOverview>('/api/finance/debts/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, debtId }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

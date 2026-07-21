@@ -6,6 +6,7 @@ import {
 } from './components/AppBackground';
 import { AdminScreen } from './screens/AdminScreen';
 import { CatsApp } from './screens/CatsApp';
+import { FinanceApp } from './screens/FinanceApp';
 import { GamesApp } from './screens/GamesApp';
 import { LauncherScreen } from './screens/LauncherScreen';
 import { MedsApp } from './screens/MedsApp';
@@ -31,6 +32,9 @@ function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
   }
   if (app.slug === 'links') {
     return 'links';
+  }
+  if (app.slug === 'finance') {
+    return 'finance';
   }
   if (app.slug === 'admin') {
     return 'admin';
@@ -103,6 +107,8 @@ function AppContent() {
     screen = <StatsApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'links') {
     screen = <LinksApp onBack={() => setActiveApp(null)} />;
+  } else if (activeApp?.slug === 'finance') {
+    screen = <FinanceApp onBack={() => setActiveApp(null)} />;
   }
 
   return (
