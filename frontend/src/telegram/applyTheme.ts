@@ -62,9 +62,7 @@ const DARK = {
   buttonText: '#052e24',
 };
 
-export function applyAppTheme(
-  params: Record<string, string | undefined> = {},
-) {
+export function applyAppTheme(params: { bg_color?: string } = {}) {
   const dark = isDarkTheme(params.bg_color);
   const base = dark ? DARK : LIGHT;
   const root = document.documentElement;
@@ -102,7 +100,7 @@ export function applyAppTheme(
 
 export function bindThemeChanges() {
   const handler = () => {
-    applyAppTheme(WebApp.themeParams as Record<string, string | undefined>);
+    applyAppTheme(WebApp.themeParams);
   };
   WebApp.onEvent?.('themeChanged', handler);
   return () => {

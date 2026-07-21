@@ -91,9 +91,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         WebApp.ready();
         WebApp.expand();
         WebApp.disableVerticalSwipes?.();
-        applyAppTheme(
-          WebApp.themeParams as Record<string, string | undefined>,
-        );
+        applyAppTheme(WebApp.themeParams);
       } catch {
         applyAppTheme();
       }
