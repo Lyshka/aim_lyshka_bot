@@ -49,9 +49,9 @@ function normalizeUrl(raw: string) {
 }
 
 function listMeta(list: BuyList) {
-  if (list.isShared) {
-    const count = list.members.length;
-    return count >= 2 ? 'На двоих' : 'Общий · ждём второго';
+  if (list.isShared && list.shareCode) {
+    const guests = list.members.filter((member) => member.role === 'member').length;
+    return guests > 0 ? `Общий · ${list.members.length} чел.` : 'Общий · код активен';
   }
   return 'Личный';
 }
@@ -269,6 +269,17 @@ export function BuyApp({ onBack }: BuyAppProps) {
           await copyText(activeList.shareCode);
           haptic('light');
         }}
+        onEnableSharing={() =>
+          void runAction(() => api.buyEnableSharing(initData, activeList.id))
+        }
+        onRemoveMember={(memberUserId) =>
+          void runAction(() =>
+            api.buyRemoveMember(initData, {
+              listId: activeList.id,
+              memberUserId,
+            }),
+          )
+        }
         onLeave={() =>
           void runAction(() => api.buyLeaveList(initData, activeList.id)).then(
             () => setActiveListId(null),
@@ -317,7 +328,7 @@ export function BuyApp({ onBack }: BuyAppProps) {
           Что нужно
         </h1>
         <p className="mt-2 text-sm" style={{ color: 'var(--tg-hint)' }}>
-          Личные списки или общий на двоих по коду
+          Личные списки или общие по коду
         </p>
       </div>
 
@@ -353,7 +364,7 @@ export function BuyApp({ onBack }: BuyAppProps) {
                 checked={newListShared}
                 onChange={(event) => setNewListShared(event.target.checked)}
               />
-              <span>Общий на двоих (будет код)</span>
+              <span>Сразу выдать код доступа</span>
             </label>
             <button
               type="button"
@@ -414,7 +425,7 @@ export function BuyApp({ onBack }: BuyAppProps) {
           <div className="app-surface rounded-2xl px-4 py-4">
             <p className="text-sm font-medium">Присоединиться</p>
             <p className="mt-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-              Введи код от партнёра — список станет общим на двоих
+              Введи код — попадёшь в общий список
             </p>
             <input
               value={joinCode}
@@ -469,6 +480,8 @@ function ListScreen({
   onPreviewWb,
   onAddItem,
   onCopyCode,
+  onEnableSharing,
+  onRemoveMember,
   onLeave,
   onDelete,
   onToggle,
@@ -497,6 +510,8 @@ function ListScreen({
   onPreviewWb: () => void;
   onAddItem: () => void;
   onCopyCode: () => Promise<void>;
+  onEnableSharing: () => void;
+  onRemoveMember: (memberUserId: number) => void;
   onLeave: () => void;
   onDelete: () => void;
   onToggle: (itemId: string) => void;
@@ -504,6 +519,7 @@ function ListScreen({
 }) {
   const pending = list.items.filter((item) => !item.purchased);
   const done = list.items.filter((item) => item.purchased);
+  const guests = list.members.filter((member) => member.role === 'member');
 
   return (
     <div className="mx-auto max-w-md px-4 pt-5 pb-24">
@@ -521,10 +537,10 @@ function ListScreen({
           <div>
             <h1 className="font-display text-xl font-semibold">{list.title}</h1>
             <p className="mt-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-              {listMeta(list)} · {list.members.map((member) => member.label).join(' · ')}
+              {listMeta(list)}
             </p>
           </div>
-          {list.isShared && list.shareCode ? (
+          {list.shareCode ? (
             <button
               type="button"
               onClick={() => void onCopyCode()}
@@ -538,6 +554,59 @@ function ListScreen({
             </button>
           ) : null}
         </div>
+
+        {list.isOwner && !list.shareCode ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onEnableSharing}
+            className="mt-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50"
+            style={{
+              background: 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
+              color: 'var(--tg-button)',
+            }}
+          >
+            Выдать код доступа
+          </button>
+        ) : null}
+
+        {list.isOwner ? (
+          <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: 'var(--app-border)' }}>
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--tg-hint)' }}>
+              Участники
+            </p>
+            {list.members.map((member) => (
+              <div key={`${member.role}-${member.userId}`} className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm">{member.label}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
+                    {member.role === 'owner' ? 'Создатель' : 'По коду'}
+                  </p>
+                </div>
+                {member.role === 'member' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onRemoveMember(member.userId)}
+                    className="rounded-xl px-3 py-1.5 text-xs disabled:opacity-50"
+                    style={{ color: 'var(--app-danger)' }}
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            {guests.length === 0 && list.shareCode ? (
+              <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+                Пока никто не присоединился
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs" style={{ color: 'var(--tg-hint)' }}>
+            {list.members.map((member) => member.label).join(' · ')}
+          </p>
+        )}
 
         <div className="mt-3 flex gap-2">
           {list.isOwner ? (

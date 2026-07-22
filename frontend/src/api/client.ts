@@ -450,9 +450,11 @@ export type StudyTrash = {
 };
 
 export type BuyListMember = {
+  memberId?: string;
   userId: number;
   label: string;
   role: 'owner' | 'member';
+  joinedAt?: string;
 };
 
 export type BuyListItem = {
@@ -675,6 +677,19 @@ export const api = {
     data: { listId: string; title: string },
   ) =>
     request<BuyOverview>('/api/buy/lists/rename', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  buyEnableSharing: (initData: string, listId: string) =>
+    request<BuyOverview>('/api/buy/lists/share-enable', {
+      method: 'POST',
+      body: JSON.stringify({ initData, listId }),
+    }),
+  buyRemoveMember: (
+    initData: string,
+    data: { listId: string; memberUserId: number },
+  ) =>
+    request<BuyOverview>('/api/buy/lists/members/remove', {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),

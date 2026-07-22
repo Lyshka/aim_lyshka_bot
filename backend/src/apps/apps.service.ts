@@ -56,7 +56,7 @@ const CATALOG = [
   {
     slug: 'buy',
     name: 'Купить',
-    description: 'Списки покупок — личные и на двоих',
+    description: 'Списки покупок — личные и общие по коду',
     icon: 'buy',
     color: '#a21caf',
     sortOrder: 65,

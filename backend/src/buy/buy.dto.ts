@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
@@ -43,6 +44,12 @@ export class BuyRenameListDto extends BuyListIdDto {
   @MinLength(1)
   @MaxLength(80)
   title!: string;
+}
+
+export class BuyRemoveMemberDto extends BuyListIdDto {
+  @Type(() => Number)
+  @IsNumber()
+  memberUserId!: number;
 }
 
 export class BuyPreviewWildberriesDto extends BuyInitDto {

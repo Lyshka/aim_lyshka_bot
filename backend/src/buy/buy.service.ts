@@ -8,7 +8,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { fetchWildberriesProduct } from './buy-wildberries';
 
 const SHARE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const SHARED_MEMBER_LIMIT = 1;
 
 function uid(userId: number) {
   return BigInt(userId);
@@ -133,16 +132,53 @@ export class BuyService {
       return this.overview(userId);
     }
 
-    if (list.members.length >= SHARED_MEMBER_LIMIT) {
-      throw new BadRequestException('В этом списке уже двое');
-    }
-
     await this.prisma.buyListMember.create({
       data: {
         listId: list.id,
         userId: uid(userId),
       },
     });
+
+    return this.overview(userId);
+  }
+
+  async enableSharing(userId: number, listId: string) {
+    const list = await this.requireOwnedList(userId, listId);
+    if (list.isShared && list.shareCode) {
+      return this.overview(userId);
+    }
+
+    const shareCode = list.shareCode ?? (await this.createUniqueShareCode());
+    await this.prisma.buyList.update({
+      where: { id: list.id },
+      data: {
+        isShared: true,
+        shareCode,
+      },
+    });
+
+    return this.overview(userId);
+  }
+
+  async removeMember(userId: number, listId: string, memberUserId: number) {
+    const list = await this.requireOwnedList(userId, listId);
+    if (memberUserId === userId) {
+      throw new BadRequestException('Нельзя удалить себя');
+    }
+    if (list.ownerId === uid(memberUserId)) {
+      throw new BadRequestException('Нельзя удалить владельца');
+    }
+
+    const removed = await this.prisma.buyListMember.deleteMany({
+      where: {
+        listId: list.id,
+        userId: uid(memberUserId),
+      },
+    });
+
+    if (removed.count === 0) {
+      throw new NotFoundException('Участник не найден');
+    }
 
     return this.overview(userId);
   }
@@ -355,9 +391,11 @@ export class BuyService {
         role: 'owner' as const,
       },
       ...list.members.map((member) => ({
+        memberId: member.id,
         userId: Number(member.userId),
         label: userLabel(member.user),
         role: 'member' as const,
+        joinedAt: member.joinedAt.toISOString(),
       })),
     ];
 

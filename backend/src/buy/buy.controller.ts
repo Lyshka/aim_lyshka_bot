@@ -8,6 +8,7 @@ import {
   BuyJoinListDto,
   BuyListIdDto,
   BuyPreviewWildberriesDto,
+  BuyRemoveMemberDto,
   BuyRenameListDto,
   BuyUpdateItemDto,
 } from './buy.dto';
@@ -79,6 +80,28 @@ export class BuyController {
       session.user.id,
       dto.listId,
       dto.title,
+    );
+  }
+
+  @Post('lists/share-enable')
+  async enableSharing(@Body() dto: BuyListIdDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'buy',
+    );
+    return this.buyService.enableSharing(session.user.id, dto.listId);
+  }
+
+  @Post('lists/members/remove')
+  async removeMember(@Body() dto: BuyRemoveMemberDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'buy',
+    );
+    return this.buyService.removeMember(
+      session.user.id,
+      dto.listId,
+      dto.memberUserId,
     );
   }
 
