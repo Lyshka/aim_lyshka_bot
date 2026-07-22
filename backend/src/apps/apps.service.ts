@@ -54,6 +54,15 @@ const CATALOG = [
     isSystem: false,
   },
   {
+    slug: 'buy',
+    name: 'Купить',
+    description: 'Списки покупок — личные и на двоих',
+    icon: 'buy',
+    color: '#a21caf',
+    sortOrder: 65,
+    isSystem: false,
+  },
+  {
     slug: 'admin',
     name: 'Админка',
     description: 'Пользователи и доступы',

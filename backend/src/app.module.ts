@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module';
 import { AppsModule } from './apps/apps.module';
 import { AuthModule } from './auth/auth.module';
 import { BotModule } from './bot/bot.module';
+import { BuyModule } from './buy/buy.module';
 import { CatsModule } from './cats/cats.module';
 import { GamesModule } from './games/games.module';
 import { MedsModule } from './meds/meds.module';
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     GamesModule,
     StatsModule,
     StudyModule,
+    BuyModule,
     AdminModule,
     BotModule,
     RemindersModule,

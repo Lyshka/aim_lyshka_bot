@@ -449,6 +449,47 @@ export type StudyTrash = {
   urls: StudyTrashUrl[];
 };
 
+export type BuyListMember = {
+  userId: number;
+  label: string;
+  role: 'owner' | 'member';
+};
+
+export type BuyListItem = {
+  id: string;
+  title: string;
+  note: string;
+  imageUrl: string;
+  productUrl: string;
+  source: string;
+  purchased: boolean;
+  sortOrder: number;
+  addedById: number;
+  addedByLabel: string;
+};
+
+export type BuyList = {
+  id: string;
+  title: string;
+  isShared: boolean;
+  shareCode: string | null;
+  isOwner: boolean;
+  role: 'owner' | 'member';
+  members: BuyListMember[];
+  items: BuyListItem[];
+};
+
+export type BuyOverview = {
+  lists: BuyList[];
+};
+
+export type BuyWildberriesPreview = {
+  title: string;
+  note: string;
+  imageUrl: string;
+  productUrl: string;
+};
+
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -600,6 +641,86 @@ export const api = {
     request<StudyTrash>('/api/study/trash/purge', {
       method: 'POST',
       body: JSON.stringify({ initData }),
+    }),
+  buyOverview: (initData: string) =>
+    request<BuyOverview>('/api/buy/overview', {
+      method: 'POST',
+      body: JSON.stringify({ initData }),
+    }),
+  buyCreateList: (
+    initData: string,
+    data: { title: string; shared?: boolean },
+  ) =>
+    request<BuyOverview>('/api/buy/lists/create', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  buyJoinList: (initData: string, code: string) =>
+    request<BuyOverview>('/api/buy/lists/join', {
+      method: 'POST',
+      body: JSON.stringify({ initData, code }),
+    }),
+  buyLeaveList: (initData: string, listId: string) =>
+    request<BuyOverview>('/api/buy/lists/leave', {
+      method: 'POST',
+      body: JSON.stringify({ initData, listId }),
+    }),
+  buyDeleteList: (initData: string, listId: string) =>
+    request<BuyOverview>('/api/buy/lists/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, listId }),
+    }),
+  buyRenameList: (
+    initData: string,
+    data: { listId: string; title: string },
+  ) =>
+    request<BuyOverview>('/api/buy/lists/rename', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  buyPreviewWildberries: (initData: string, url: string) =>
+    request<BuyWildberriesPreview>('/api/buy/wildberries/preview', {
+      method: 'POST',
+      body: JSON.stringify({ initData, url }),
+    }),
+  buyAddItem: (
+    initData: string,
+    data: {
+      listId: string;
+      url?: string;
+      title?: string;
+      note?: string;
+      imageUrl?: string;
+      productUrl?: string;
+    },
+  ) =>
+    request<BuyOverview>('/api/buy/items/add', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  buyUpdateItem: (
+    initData: string,
+    data: {
+      itemId: string;
+      title?: string;
+      note?: string;
+      imageUrl?: string;
+      productUrl?: string;
+    },
+  ) =>
+    request<BuyOverview>('/api/buy/items/update', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
+  buyToggleItem: (initData: string, itemId: string) =>
+    request<BuyOverview>('/api/buy/items/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ initData, itemId }),
+    }),
+  buyDeleteItem: (initData: string, itemId: string) =>
+    request<BuyOverview>('/api/buy/items/delete', {
+      method: 'POST',
+      body: JSON.stringify({ initData, itemId }),
     }),
   overview: (initData: string) =>
     request<Overview>('/api/meds/overview', {

@@ -5,6 +5,7 @@ import {
   type AppBackgroundVariant,
 } from './components/AppBackground';
 import { AdminScreen } from './screens/AdminScreen';
+import { BuyApp } from './screens/BuyApp';
 import { CatsApp } from './screens/CatsApp';
 import { GamesApp } from './screens/GamesApp';
 import { LauncherScreen } from './screens/LauncherScreen';
@@ -31,6 +32,9 @@ function backgroundVariant(app: PlatformApp | null): AppBackgroundVariant {
   }
   if (app.slug === 'links') {
     return 'links';
+  }
+  if (app.slug === 'buy') {
+    return 'buy';
   }
   if (app.slug === 'admin') {
     return 'admin';
@@ -103,6 +107,8 @@ function AppContent() {
     screen = <StatsApp onBack={() => setActiveApp(null)} />;
   } else if (activeApp?.slug === 'links') {
     screen = <LinksApp onBack={() => setActiveApp(null)} />;
+  } else if (activeApp?.slug === 'buy') {
+    screen = <BuyApp onBack={() => setActiveApp(null)} />;
   }
 
   return (

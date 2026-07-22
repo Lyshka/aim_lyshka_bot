@@ -25,6 +25,9 @@ model User {
   steamGames   SteamWishlistGame[]
   studySections StudySection[]
   studyItems    StudyItem[]
+  buyListsOwned BuyList[]       @relation("BuyListOwner")
+  buyListMembers BuyListMember[]
+  buyListItemsAdded BuyListItem[]
 }
 
 model App {
@@ -247,4 +250,52 @@ model StudyItemUrl {
 
   @@index([itemId, sortOrder])
   @@index([itemId, deletedAt])
+}
+
+model BuyList {
+  id        String          @id @default(cuid())
+  ownerId   BigInt
+  title     String
+  shareCode String?         @unique
+  isShared  Boolean         @default(false)
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  owner     User            @relation("BuyListOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   BuyListMember[]
+  items     BuyListItem[]
+
+  @@index([ownerId, sortOrder])
+}
+
+model BuyListMember {
+  id       String   @id @default(cuid())
+  listId   String
+  userId   BigInt
+  joinedAt DateTime @default(now())
+  list     BuyList  @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+  @@index([userId])
+}
+
+model BuyListItem {
+  id         String   @id @default(cuid())
+  listId     String
+  addedById  BigInt
+  title      String
+  note       String   @default("")
+  imageUrl   String   @default("")
+  productUrl String   @default("")
+  source     String   @default("manual")
+  purchased  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  list       BuyList  @relation(fields: [listId], references: [id], onDelete: Cascade)
+  addedBy    User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+
+  @@index([listId, sortOrder])
+  @@index([listId, purchased])
 }
