@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { fetchWildberriesProduct } from './buy-wildberries';
+import {
+  buyImageUrlFromFilename,
+  removeBuyUploadIfLocal,
+} from './buy-upload';
 
 const SHARE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -220,49 +223,27 @@ export class BuyService {
     return this.overview(userId);
   }
 
-  async previewWildberries(urlRaw: string) {
-    const product = await fetchWildberriesProduct(urlRaw);
-    if (!product) {
-      throw new BadRequestException(
-        'Не удалось распознать ссылку Wildberries',
-      );
-    }
-    return product;
-  }
-
   async addItem(
     userId: number,
     listId: string,
     data: {
-      url?: string;
-      title?: string;
+      title: string;
       note?: string;
-      imageUrl?: string;
       productUrl?: string;
+      imageFilename?: string;
     },
   ) {
     const list = await this.requireAccessibleList(userId, listId);
-
-    let title = data.title?.trim() ?? '';
-    let note = data.note?.trim() ?? '';
-    let imageUrl = normalizeOptionalUrl(data.imageUrl);
-    let productUrl = normalizeOptionalUrl(data.productUrl ?? data.url);
-    let source = 'manual';
-
-    if (data.url?.trim()) {
-      const wb = await fetchWildberriesProduct(data.url);
-      if (wb) {
-        title = wb.title;
-        note = note || wb.note;
-        imageUrl = wb.imageUrl;
-        productUrl = wb.productUrl;
-        source = 'wildberries';
-      }
-    }
-
+    const title = data.title.trim();
     if (!title) {
       throw new BadRequestException('Укажи название');
     }
+
+    const note = data.note?.trim() ?? '';
+    const productUrl = normalizeOptionalUrl(data.productUrl);
+    const imageUrl = data.imageFilename
+      ? buyImageUrlFromFilename(data.imageFilename)
+      : '';
 
     const maxOrder = await this.prisma.buyListItem.aggregate({
       where: { listId: list.id },
@@ -277,7 +258,7 @@ export class BuyService {
         note: note.slice(0, 500),
         imageUrl: imageUrl.slice(0, 2000),
         productUrl: productUrl.slice(0, 2000),
-        source,
+        source: 'manual',
         sortOrder: (maxOrder._max.sortOrder ?? 0) + 10,
       },
     });
@@ -291,8 +272,9 @@ export class BuyService {
     patch: {
       title?: string;
       note?: string;
-      imageUrl?: string;
       productUrl?: string;
+      imageFilename?: string;
+      clearImage?: boolean;
     },
   ) {
     const item = await this.requireAccessibleItem(userId, itemId);
@@ -313,11 +295,19 @@ export class BuyService {
     if (patch.note !== undefined) {
       data.note = patch.note.trim().slice(0, 500);
     }
-    if (patch.imageUrl !== undefined) {
-      data.imageUrl = normalizeOptionalUrl(patch.imageUrl).slice(0, 2000);
-    }
     if (patch.productUrl !== undefined) {
       data.productUrl = normalizeOptionalUrl(patch.productUrl).slice(0, 2000);
+    }
+    if (patch.clearImage) {
+      if (item.imageUrl) {
+        removeBuyUploadIfLocal(item.imageUrl);
+      }
+      data.imageUrl = '';
+    } else if (patch.imageFilename) {
+      if (item.imageUrl) {
+        removeBuyUploadIfLocal(item.imageUrl);
+      }
+      data.imageUrl = buyImageUrlFromFilename(patch.imageFilename).slice(0, 2000);
     }
 
     await this.prisma.buyListItem.update({
@@ -339,6 +329,9 @@ export class BuyService {
 
   async deleteItem(userId: number, itemId: string) {
     const item = await this.requireAccessibleItem(userId, itemId);
+    if (item.imageUrl) {
+      removeBuyUploadIfLocal(item.imageUrl);
+    }
     await this.prisma.buyListItem.delete({ where: { id: item.id } });
     return this.overview(userId);
   }

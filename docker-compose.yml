@@ -32,6 +32,7 @@ services:
       ALLOW_DEV_AUTH: "false"
     volumes:
       - webapp_shared:/shared
+      - buy_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -64,3 +65,4 @@ services:
 volumes:
   lyshka_pg:
   webapp_shared:
+  buy_uploads:

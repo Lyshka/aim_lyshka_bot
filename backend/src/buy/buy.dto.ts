@@ -52,34 +52,20 @@ export class BuyRemoveMemberDto extends BuyListIdDto {
   memberUserId!: number;
 }
 
-export class BuyPreviewWildberriesDto extends BuyInitDto {
+export class BuyAddItemDto extends BuyInitDto {
   @IsString()
-  @MinLength(4)
-  @MaxLength(2000)
-  url!: string;
-}
+  @MinLength(1)
+  listId!: string;
 
-export class BuyAddItemDto extends BuyListIdDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  url?: string;
-
-  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
-  title?: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(500)
   note?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  imageUrl?: string;
 
   @IsOptional()
   @IsString()
@@ -102,11 +88,6 @@ export class BuyUpdateItemDto extends BuyInitDto {
   @IsString()
   @MaxLength(500)
   note?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  imageUrl?: string;
 
   @IsOptional()
   @IsString()

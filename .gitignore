@@ -11,5 +11,6 @@ coverage
 .vscode
 backend/dist
 frontend/dist
+backend/uploads
 backend/prisma/dev.db
 backend/prisma/test.db

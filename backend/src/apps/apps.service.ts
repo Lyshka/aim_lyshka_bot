@@ -55,7 +55,7 @@ const CATALOG = [
   },
   {
     slug: 'buy',
-    name: 'Купить',
+    name: 'Покупки',
     description: 'Списки покупок — личные и общие по коду',
     icon: 'buy',
     color: '#a21caf',

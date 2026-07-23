@@ -101,13 +101,17 @@ export type AdminOverview = {
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const isFormData =
+    typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
     ...init,
+    headers,
   });
 
   if (!response.ok) {
@@ -130,6 +134,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function mediaUrl(path: string) {
+  if (!path) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return `${API_BASE}${path}`;
 }
 
 export type CatPost = {
@@ -485,13 +499,6 @@ export type BuyOverview = {
   lists: BuyList[];
 };
 
-export type BuyWildberriesPreview = {
-  title: string;
-  note: string;
-  imageUrl: string;
-  productUrl: string;
-};
-
 export const api = {
   auth: (initData: string) =>
     request<AuthResponse>('/api/auth/telegram', {
@@ -693,40 +700,64 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
-  buyPreviewWildberries: (initData: string, url: string) =>
-    request<BuyWildberriesPreview>('/api/buy/wildberries/preview', {
-      method: 'POST',
-      body: JSON.stringify({ initData, url }),
-    }),
   buyAddItem: (
     initData: string,
     data: {
       listId: string;
-      url?: string;
-      title?: string;
+      title: string;
       note?: string;
-      imageUrl?: string;
       productUrl?: string;
+      image?: File | null;
     },
-  ) =>
-    request<BuyOverview>('/api/buy/items/add', {
+  ) => {
+    const body = new FormData();
+    body.set('initData', initData);
+    body.set('listId', data.listId);
+    body.set('title', data.title);
+    if (data.note) {
+      body.set('note', data.note);
+    }
+    if (data.productUrl) {
+      body.set('productUrl', data.productUrl);
+    }
+    if (data.image) {
+      body.set('image', data.image);
+    }
+    return request<BuyOverview>('/api/buy/items/add', {
       method: 'POST',
-      body: JSON.stringify({ initData, ...data }),
-    }),
+      body,
+    });
+  },
   buyUpdateItem: (
     initData: string,
     data: {
       itemId: string;
       title?: string;
       note?: string;
-      imageUrl?: string;
       productUrl?: string;
+      image?: File | null;
     },
-  ) =>
-    request<BuyOverview>('/api/buy/items/update', {
+  ) => {
+    const body = new FormData();
+    body.set('initData', initData);
+    body.set('itemId', data.itemId);
+    if (data.title !== undefined) {
+      body.set('title', data.title);
+    }
+    if (data.note !== undefined) {
+      body.set('note', data.note);
+    }
+    if (data.productUrl !== undefined) {
+      body.set('productUrl', data.productUrl);
+    }
+    if (data.image) {
+      body.set('image', data.image);
+    }
+    return request<BuyOverview>('/api/buy/items/update', {
       method: 'POST',
-      body: JSON.stringify({ initData, ...data }),
-    }),
+      body,
+    });
+  },
   buyToggleItem: (initData: string, itemId: string) =>
     request<BuyOverview>('/api/buy/items/toggle', {
       method: 'POST',

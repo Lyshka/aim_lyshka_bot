@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   api,
+  mediaUrl,
   type BuyList,
   type BuyListItem,
   type BuyOverview,
@@ -66,15 +67,12 @@ export function BuyApp({ onBack }: BuyAppProps) {
   const [newListTitle, setNewListTitle] = useState('');
   const [newListShared, setNewListShared] = useState(false);
   const [joinCode, setJoinCode] = useState('');
-  const [addMode, setAddMode] = useState<'wb' | 'manual'>('wb');
-  const [wbUrl, setWbUrl] = useState('');
-  const [manualTitle, setManualTitle] = useState('');
-  const [manualNote, setManualNote] = useState('');
-  const [manualImageUrl, setManualImageUrl] = useState('');
-  const [manualProductUrl, setManualProductUrl] = useState('');
-  const [previewTitle, setPreviewTitle] = useState('');
-  const [previewNote, setPreviewNote] = useState('');
-  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [itemTitle, setItemTitle] = useState('');
+  const [itemNote, setItemNote] = useState('');
+  const [itemProductUrl, setItemProductUrl] = useState('');
+  const [itemImage, setItemImage] = useState<File | null>(null);
+  const [itemImagePreview, setItemImagePreview] = useState('');
+  const [listTab, setListTab] = useState<'items' | 'add' | 'more'>('items');
 
   const tabs = useMemo(
     () => [
@@ -101,6 +99,37 @@ export function BuyApp({ onBack }: BuyAppProps) {
       setError(err.message);
     });
   }, [load]);
+
+  useEffect(() => {
+    return () => {
+      if (itemImagePreview) {
+        URL.revokeObjectURL(itemImagePreview);
+      }
+    };
+  }, [itemImagePreview]);
+
+  function clearItemForm() {
+    setItemTitle('');
+    setItemNote('');
+    setItemProductUrl('');
+    setItemImage(null);
+    setItemImagePreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return '';
+    });
+  }
+
+  function handlePickImage(file: File | null) {
+    setItemImagePreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return file ? URL.createObjectURL(file) : '';
+    });
+    setItemImage(file);
+  }
 
   async function runAction(action: () => Promise<BuyOverview>) {
     setBusy(true);
@@ -154,58 +183,26 @@ export function BuyApp({ onBack }: BuyAppProps) {
     }
   }
 
-  async function handlePreviewWb() {
-    const url = normalizeUrl(wbUrl);
-    if (!url) {
-      setError('Вставь ссылку Wildberries');
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const preview = await api.buyPreviewWildberries(initData, url);
-      setPreviewTitle(preview.title);
-      setPreviewNote(preview.note);
-      setPreviewImageUrl(preview.imageUrl);
-      haptic('light');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось загрузить');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function handleAddItem() {
     if (!activeList) {
       return;
     }
-    if (addMode === 'wb') {
-      await runAction(() =>
-        api.buyAddItem(initData, {
-          listId: activeList.id,
-          url: normalizeUrl(wbUrl),
-          note: previewNote.trim() || undefined,
-        }),
-      );
-      setWbUrl('');
-      setPreviewTitle('');
-      setPreviewNote('');
-      setPreviewImageUrl('');
+    const title = itemTitle.trim();
+    if (!title) {
+      setError('Укажи название');
       return;
     }
     await runAction(() =>
       api.buyAddItem(initData, {
         listId: activeList.id,
-        title: manualTitle.trim(),
-        note: manualNote.trim() || undefined,
-        imageUrl: manualImageUrl.trim() || undefined,
-        productUrl: manualProductUrl.trim() || undefined,
+        title,
+        note: itemNote.trim() || undefined,
+        productUrl: normalizeUrl(itemProductUrl) || undefined,
+        image: itemImage,
       }),
     );
-    setManualTitle('');
-    setManualNote('');
-    setManualImageUrl('');
-    setManualProductUrl('');
+    clearItemForm();
+    setListTab('items');
   }
 
   if (error && !data) {
@@ -244,23 +241,22 @@ export function BuyApp({ onBack }: BuyAppProps) {
         busy={busy}
         error={error}
         userId={user?.id ?? 0}
-        addMode={addMode}
-        wbUrl={wbUrl}
-        previewTitle={previewTitle}
-        previewNote={previewNote}
-        previewImageUrl={previewImageUrl}
-        manualTitle={manualTitle}
-        manualNote={manualNote}
-        manualImageUrl={manualImageUrl}
-        manualProductUrl={manualProductUrl}
-        onBack={() => setActiveListId(null)}
-        onSetAddMode={setAddMode}
-        onSetWbUrl={setWbUrl}
-        onSetManualTitle={setManualTitle}
-        onSetManualNote={setManualNote}
-        onSetManualImageUrl={setManualImageUrl}
-        onSetManualProductUrl={setManualProductUrl}
-        onPreviewWb={() => void handlePreviewWb()}
+        tab={listTab}
+        onTabChange={setListTab}
+        itemTitle={itemTitle}
+        itemNote={itemNote}
+        itemProductUrl={itemProductUrl}
+        itemImagePreview={itemImagePreview}
+        onBack={() => {
+          setActiveListId(null);
+          setListTab('items');
+          clearItemForm();
+        }}
+        onSetItemTitle={setItemTitle}
+        onSetItemNote={setItemNote}
+        onSetItemProductUrl={setItemProductUrl}
+        onPickImage={handlePickImage}
+        onClearImage={() => handlePickImage(null)}
         onAddItem={() => void handleAddItem()}
         onCopyCode={async () => {
           if (!activeList.shareCode) {
@@ -282,12 +278,18 @@ export function BuyApp({ onBack }: BuyAppProps) {
         }
         onLeave={() =>
           void runAction(() => api.buyLeaveList(initData, activeList.id)).then(
-            () => setActiveListId(null),
+            () => {
+              setActiveListId(null);
+              setListTab('items');
+            },
           )
         }
         onDelete={() =>
           void runAction(() => api.buyDeleteList(initData, activeList.id)).then(
-            () => setActiveListId(null),
+            () => {
+              setActiveListId(null);
+              setListTab('items');
+            },
           )
         }
         onToggle={(itemId) =>
@@ -322,7 +324,7 @@ export function BuyApp({ onBack }: BuyAppProps) {
           className="font-display text-xs tracking-[0.2em] uppercase"
           style={{ color: 'var(--tg-button)' }}
         >
-          Купить
+          Покупки
         </p>
         <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight">
           Что нужно
@@ -461,23 +463,18 @@ function ListScreen({
   busy,
   error,
   userId,
-  addMode,
-  wbUrl,
-  previewTitle,
-  previewNote,
-  previewImageUrl,
-  manualTitle,
-  manualNote,
-  manualImageUrl,
-  manualProductUrl,
+  tab,
+  onTabChange,
+  itemTitle,
+  itemNote,
+  itemProductUrl,
+  itemImagePreview,
   onBack,
-  onSetAddMode,
-  onSetWbUrl,
-  onSetManualTitle,
-  onSetManualNote,
-  onSetManualImageUrl,
-  onSetManualProductUrl,
-  onPreviewWb,
+  onSetItemTitle,
+  onSetItemNote,
+  onSetItemProductUrl,
+  onPickImage,
+  onClearImage,
   onAddItem,
   onCopyCode,
   onEnableSharing,
@@ -491,23 +488,18 @@ function ListScreen({
   busy: boolean;
   error: string | null;
   userId: number;
-  addMode: 'wb' | 'manual';
-  wbUrl: string;
-  previewTitle: string;
-  previewNote: string;
-  previewImageUrl: string;
-  manualTitle: string;
-  manualNote: string;
-  manualImageUrl: string;
-  manualProductUrl: string;
+  tab: 'items' | 'add' | 'more';
+  onTabChange: (tab: 'items' | 'add' | 'more') => void;
+  itemTitle: string;
+  itemNote: string;
+  itemProductUrl: string;
+  itemImagePreview: string;
   onBack: () => void;
-  onSetAddMode: (mode: 'wb' | 'manual') => void;
-  onSetWbUrl: (value: string) => void;
-  onSetManualTitle: (value: string) => void;
-  onSetManualNote: (value: string) => void;
-  onSetManualImageUrl: (value: string) => void;
-  onSetManualProductUrl: (value: string) => void;
-  onPreviewWb: () => void;
+  onSetItemTitle: (value: string) => void;
+  onSetItemNote: (value: string) => void;
+  onSetItemProductUrl: (value: string) => void;
+  onPickImage: (file: File | null) => void;
+  onClearImage: () => void;
   onAddItem: () => void;
   onCopyCode: () => Promise<void>;
   onEnableSharing: () => void;
@@ -520,9 +512,14 @@ function ListScreen({
   const pending = list.items.filter((item) => !item.purchased);
   const done = list.items.filter((item) => item.purchased);
   const guests = list.members.filter((member) => member.role === 'member');
+  const listTabs = [
+    { id: 'items' as const, label: 'Список' },
+    { id: 'add' as const, label: 'Добавить' },
+    { id: 'more' as const, label: 'Ещё' },
+  ];
 
   return (
-    <div className="mx-auto max-w-md px-4 pt-5 pb-24">
+    <Shell tab={tab} onTabChange={onTabChange} tabs={listTabs}>
       <button
         type="button"
         onClick={onBack}
@@ -537,7 +534,7 @@ function ListScreen({
           <div>
             <h1 className="font-display text-xl font-semibold">{list.title}</h1>
             <p className="mt-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-              {listMeta(list)}
+              {listMeta(list)} · {pending.length} осталось
             </p>
           </div>
           {list.shareCode ? (
@@ -554,83 +551,6 @@ function ListScreen({
             </button>
           ) : null}
         </div>
-
-        {list.isOwner && !list.shareCode ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onEnableSharing}
-            className="mt-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50"
-            style={{
-              background: 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
-              color: 'var(--tg-button)',
-            }}
-          >
-            Выдать код доступа
-          </button>
-        ) : null}
-
-        {list.isOwner ? (
-          <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: 'var(--app-border)' }}>
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--tg-hint)' }}>
-              Участники
-            </p>
-            {list.members.map((member) => (
-              <div key={`${member.role}-${member.userId}`} className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm">{member.label}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
-                    {member.role === 'owner' ? 'Создатель' : 'По коду'}
-                  </p>
-                </div>
-                {member.role === 'member' ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onRemoveMember(member.userId)}
-                    className="rounded-xl px-3 py-1.5 text-xs disabled:opacity-50"
-                    style={{ color: 'var(--app-danger)' }}
-                  >
-                    Удалить
-                  </button>
-                ) : null}
-              </div>
-            ))}
-            {guests.length === 0 && list.shareCode ? (
-              <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
-                Пока никто не присоединился
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-3 text-xs" style={{ color: 'var(--tg-hint)' }}>
-            {list.members.map((member) => member.label).join(' · ')}
-          </p>
-        )}
-
-        <div className="mt-3 flex gap-2">
-          {list.isOwner ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onDelete}
-              className="rounded-xl px-3 py-2 text-xs disabled:opacity-50"
-              style={{ color: 'var(--app-danger)' }}
-            >
-              Удалить
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onLeave}
-              className="rounded-xl px-3 py-2 text-xs disabled:opacity-50"
-              style={{ color: 'var(--app-danger)' }}
-            >
-              Выйти
-            </button>
-          )}
-        </div>
       </div>
 
       {error ? (
@@ -645,193 +565,249 @@ function ListScreen({
         </p>
       ) : null}
 
-      <div className="mt-4 app-surface rounded-2xl px-4 py-4">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onSetAddMode('wb')}
-            className="flex-1 rounded-xl px-3 py-2 text-sm font-medium"
-            style={{
-              background:
-                addMode === 'wb'
-                  ? 'var(--tg-button)'
-                  : 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
-              color: addMode === 'wb' ? 'var(--tg-button-text)' : 'var(--tg-button)',
-            }}
-          >
-            Wildberries
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetAddMode('manual')}
-            className="flex-1 rounded-xl px-3 py-2 text-sm font-medium"
-            style={{
-              background:
-                addMode === 'manual'
-                  ? 'var(--tg-button)'
-                  : 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
-              color:
-                addMode === 'manual' ? 'var(--tg-button-text)' : 'var(--tg-button)',
-            }}
-          >
-            Вручную
-          </button>
-        </div>
-
-        {addMode === 'wb' ? (
-          <div className="mt-3 space-y-2">
-            <input
-              value={wbUrl}
-              onChange={(event) => onSetWbUrl(event.target.value)}
-              placeholder="Ссылка wildberries.ru"
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                background: 'var(--tg-secondary)',
-                color: 'var(--app-text)',
-              }}
+      {tab === 'items' ? (
+        <div className="mt-4 space-y-3">
+          {pending.length === 0 && done.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
+              Список пустой — добавь товар во вкладке «Добавить»
+            </p>
+          ) : null}
+          {pending.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              userId={userId}
+              busy={busy}
+              onToggle={() => onToggle(item.id)}
+              onDelete={() => onDeleteItem(item.id)}
             />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onPreviewWb}
-              className="w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-50"
-              style={{
-                background: 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
-                color: 'var(--tg-button)',
-              }}
+          ))}
+          {done.length > 0 ? (
+            <p
+              className="pt-2 text-xs font-medium uppercase tracking-wide"
+              style={{ color: 'var(--tg-hint)' }}
             >
-              Проверить
-            </button>
-            {previewTitle ? (
-              <PreviewCard
-                title={previewTitle}
-                note={previewNote}
-                imageUrl={previewImageUrl}
+              Куплено
+            </p>
+          ) : null}
+          {done.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              userId={userId}
+              busy={busy}
+              onToggle={() => onToggle(item.id)}
+              onDelete={() => onDeleteItem(item.id)}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {tab === 'add' ? (
+        <div className="mt-4 app-surface rounded-2xl px-4 py-4 space-y-2">
+          <input
+            value={itemTitle}
+            onChange={(event) => onSetItemTitle(event.target.value)}
+            placeholder="Название"
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{
+              background: 'var(--tg-secondary)',
+              color: 'var(--app-text)',
+            }}
+          />
+          <input
+            value={itemNote}
+            onChange={(event) => onSetItemNote(event.target.value)}
+            placeholder="Пояснение"
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{
+              background: 'var(--tg-secondary)',
+              color: 'var(--app-text)',
+            }}
+          />
+          <input
+            value={itemProductUrl}
+            onChange={(event) => onSetItemProductUrl(event.target.value)}
+            placeholder="Ссылка на товар (необязательно)"
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{
+              background: 'var(--tg-secondary)',
+              color: 'var(--app-text)',
+            }}
+          />
+
+          <div
+            className="rounded-xl px-3 py-3"
+            style={{ background: 'var(--tg-secondary)' }}
+          >
+            <p className="text-sm font-medium">Фото</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
+              Сделай снимок или выбери из галереи
+            </p>
+            <label className="mt-3 block">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="block w-full text-sm"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  onPickImage(file);
+                  event.target.value = '';
+                }}
               />
+            </label>
+            {itemImagePreview ? (
+              <div className="mt-3 flex items-start gap-3">
+                <img
+                  src={itemImagePreview}
+                  alt=""
+                  className="h-24 w-24 rounded-xl object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={onClearImage}
+                  className="rounded-xl px-3 py-2 text-xs"
+                  style={{ color: 'var(--app-danger)' }}
+                >
+                  Убрать фото
+                </button>
+              </div>
             ) : null}
           </div>
-        ) : (
-          <div className="mt-3 space-y-2">
-            <input
-              value={manualTitle}
-              onChange={(event) => onSetManualTitle(event.target.value)}
-              placeholder="Название"
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                background: 'var(--tg-secondary)',
-                color: 'var(--app-text)',
-              }}
-            />
-            <input
-              value={manualNote}
-              onChange={(event) => onSetManualNote(event.target.value)}
-              placeholder="Пояснение"
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                background: 'var(--tg-secondary)',
-                color: 'var(--app-text)',
-              }}
-            />
-            <input
-              value={manualImageUrl}
-              onChange={(event) => onSetManualImageUrl(event.target.value)}
-              placeholder="Ссылка на фото"
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                background: 'var(--tg-secondary)',
-                color: 'var(--app-text)',
-              }}
-            />
-            <input
-              value={manualProductUrl}
-              onChange={(event) => onSetManualProductUrl(event.target.value)}
-              placeholder="Ссылка на товар (необязательно)"
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                background: 'var(--tg-secondary)',
-                color: 'var(--app-text)',
-              }}
-            />
-          </div>
-        )}
 
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onAddItem}
-          className="mt-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50"
-          style={{
-            background: 'var(--tg-button)',
-            color: 'var(--tg-button-text)',
-          }}
-        >
-          Добавить
-        </button>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {pending.length === 0 && done.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-            Список пустой
-          </p>
-        ) : null}
-        {pending.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            userId={userId}
-            busy={busy}
-            onToggle={() => onToggle(item.id)}
-            onDelete={() => onDeleteItem(item.id)}
-          />
-        ))}
-        {done.length > 0 ? (
-          <p className="pt-2 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--tg-hint)' }}>
-            Куплено
-          </p>
-        ) : null}
-        {done.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            userId={userId}
-            busy={busy}
-            onToggle={() => onToggle(item.id)}
-            onDelete={() => onDeleteItem(item.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PreviewCard({
-  title,
-  note,
-  imageUrl,
-}: {
-  title: string;
-  note: string;
-  imageUrl: string;
-}) {
-  return (
-    <div className="flex gap-3 rounded-xl p-3" style={{ background: 'var(--tg-secondary)' }}>
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt=""
-          className="h-16 w-16 shrink-0 rounded-lg object-cover"
-        />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onAddItem}
+            className="mt-2 w-full rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50"
+            style={{
+              background: 'var(--tg-button)',
+              color: 'var(--tg-button-text)',
+            }}
+          >
+            Добавить в список
+          </button>
+        </div>
       ) : null}
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{title}</p>
-        {note ? (
-          <p className="mt-1 text-xs" style={{ color: 'var(--tg-hint)' }}>
-            {note}
-          </p>
-        ) : null}
-      </div>
-    </div>
+
+      {tab === 'more' ? (
+        <div className="mt-4 space-y-3">
+          <div className="app-surface rounded-2xl px-4 py-4">
+            {list.isOwner && !list.shareCode ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onEnableSharing}
+                className="w-full rounded-xl px-3 py-2.5 text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
+                  color: 'var(--tg-button)',
+                }}
+              >
+                Выдать код доступа
+              </button>
+            ) : null}
+
+            {list.shareCode ? (
+              <div>
+                <p
+                  className="text-xs font-medium uppercase tracking-wide"
+                  style={{ color: 'var(--tg-hint)' }}
+                >
+                  Код доступа
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void onCopyCode()}
+                  className="mt-2 w-full rounded-xl px-3 py-2.5 text-sm font-semibold tracking-[0.2em]"
+                  style={{
+                    background: 'var(--tg-secondary)',
+                    color: 'var(--tg-button)',
+                  }}
+                >
+                  {list.shareCode}
+                </button>
+              </div>
+            ) : null}
+
+            {list.isOwner ? (
+              <div
+                className="mt-3 space-y-2 border-t pt-3"
+                style={{ borderColor: 'var(--app-border)' }}
+              >
+                <p
+                  className="text-xs font-medium uppercase tracking-wide"
+                  style={{ color: 'var(--tg-hint)' }}
+                >
+                  Участники
+                </p>
+                {list.members.map((member) => (
+                  <div
+                    key={`${member.role}-${member.userId}`}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <p className="text-sm">{member.label}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--tg-hint)' }}>
+                        {member.role === 'owner' ? 'Создатель' : 'По коду'}
+                      </p>
+                    </div>
+                    {member.role === 'member' ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onRemoveMember(member.userId)}
+                        className="rounded-xl px-3 py-1.5 text-xs disabled:opacity-50"
+                        style={{ color: 'var(--app-danger)' }}
+                      >
+                        Удалить
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                {guests.length === 0 && list.shareCode ? (
+                  <p className="text-xs" style={{ color: 'var(--tg-hint)' }}>
+                    Пока никто не присоединился
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs" style={{ color: 'var(--tg-hint)' }}>
+                {list.members.map((member) => member.label).join(' · ')}
+              </p>
+            )}
+
+            <div
+              className="mt-3 flex gap-2 border-t pt-3"
+              style={{ borderColor: 'var(--app-border)' }}
+            >
+              {list.isOwner ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onDelete}
+                  className="rounded-xl px-3 py-2 text-xs disabled:opacity-50"
+                  style={{ color: 'var(--app-danger)' }}
+                >
+                  Удалить список
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onLeave}
+                  className="rounded-xl px-3 py-2 text-xs disabled:opacity-50"
+                  style={{ color: 'var(--app-danger)' }}
+                >
+                  Выйти из списка
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </Shell>
   );
 }
 
@@ -848,6 +824,8 @@ function ItemCard({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const image = mediaUrl(item.imageUrl);
+
   return (
     <div
       className="app-surface rounded-2xl px-4 py-4"
@@ -856,9 +834,9 @@ function ItemCard({
       }}
     >
       <div className="flex gap-3">
-        {item.imageUrl ? (
+        {image ? (
           <img
-            src={item.imageUrl}
+            src={image}
             alt=""
             className="h-20 w-20 shrink-0 rounded-xl object-cover"
           />
@@ -870,7 +848,7 @@ function ItemCard({
               color: 'var(--tg-hint)',
             }}
           >
-            WB
+            Фото
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -889,7 +867,6 @@ function ItemCard({
           ) : null}
           <p className="mt-1 text-[11px]" style={{ color: 'var(--tg-hint)' }}>
             {item.addedById === userId ? 'Ты' : item.addedByLabel}
-            {item.source === 'wildberries' ? ' · WB' : ''}
           </p>
           {item.productUrl ? (
             <button

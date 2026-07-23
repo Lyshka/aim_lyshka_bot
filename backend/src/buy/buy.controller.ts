@@ -1,4 +1,11 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from '../auth/auth.service';
 import {
   BuyAddItemDto,
@@ -7,11 +14,11 @@ import {
   BuyItemIdDto,
   BuyJoinListDto,
   BuyListIdDto,
-  BuyPreviewWildberriesDto,
   BuyRemoveMemberDto,
   BuyRenameListDto,
   BuyUpdateItemDto,
 } from './buy.dto';
+import { createBuyMulterOptions } from './buy-upload';
 import { BuyService } from './buy.service';
 
 @Controller('buy')
@@ -105,29 +112,30 @@ export class BuyController {
     );
   }
 
-  @Post('wildberries/preview')
-  async previewWildberries(@Body() dto: BuyPreviewWildberriesDto) {
-    await this.authService.authenticateApp(dto.initData ?? '', 'buy');
-    return this.buyService.previewWildberries(dto.url);
-  }
-
   @Post('items/add')
-  async addItem(@Body() dto: BuyAddItemDto) {
+  @UseInterceptors(FileInterceptor('image', createBuyMulterOptions()))
+  async addItem(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: BuyAddItemDto,
+  ) {
     const session = await this.authService.authenticateApp(
       dto.initData ?? '',
       'buy',
     );
     return this.buyService.addItem(session.user.id, dto.listId, {
-      url: dto.url,
       title: dto.title,
       note: dto.note,
-      imageUrl: dto.imageUrl,
       productUrl: dto.productUrl,
+      imageFilename: file?.filename,
     });
   }
 
   @Post('items/update')
-  async updateItem(@Body() dto: BuyUpdateItemDto) {
+  @UseInterceptors(FileInterceptor('image', createBuyMulterOptions()))
+  async updateItem(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: BuyUpdateItemDto,
+  ) {
     const session = await this.authService.authenticateApp(
       dto.initData ?? '',
       'buy',
@@ -135,8 +143,8 @@ export class BuyController {
     return this.buyService.updateItem(session.user.id, dto.itemId, {
       title: dto.title,
       note: dto.note,
-      imageUrl: dto.imageUrl,
       productUrl: dto.productUrl,
+      imageFilename: file?.filename,
     });
   }
 
