@@ -198,7 +198,7 @@ async function fetchWishlist(
     {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; LyshkaHub/1.0)',
       },
     },
   );
@@ -249,7 +249,7 @@ async function fetchGameMeta(appId: string): Promise<{
     const response = await fetch(
       `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=ru&l=russian`,
       {
-        headers: { 'User-Agent': 'lyshka-service/1.0' },
+        headers: { 'User-Agent': 'LyshkaHub/1.0' },
       },
     );
     if (!response.ok) {
@@ -415,7 +415,7 @@ async function fetchCs2Inventory(steamId: string): Promise<{
       {
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+          'User-Agent': 'Mozilla/5.0 (compatible; LyshkaHub/1.0)',
         },
       },
     );
@@ -499,7 +499,7 @@ async function fetchBulkMarketPricesUsd(): Promise<Map<string, number>> {
   const response = await fetch('https://market.csgo.com/api/v2/prices/USD.json', {
     headers: {
       Accept: 'application/json',
-      'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; LyshkaHub/1.0)',
     },
   });
 
@@ -551,7 +551,7 @@ async function fetchMarketPriceUsd(
     {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; LyshkaHub/1.0)',
       },
     },
   );

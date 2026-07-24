@@ -38,15 +38,15 @@ export class BotUpdate {
     await this.botService.applyMenuButton(url);
 
     await ctx.reply(
-      `Привет, ${name}!\n\nЭто lyshka-service — платформа приложений.\nОткрой лаунчер кнопкой ниже.`,
+      `Привет, ${name}!\n\nЭто Lyshka Hub — платформа приложений.\nОткрой лаунчер кнопкой ниже.`,
       Markup.inlineKeyboard([
-        Markup.button.webApp('Открыть lyshka-service', url),
+        Markup.button.webApp('Открыть Lyshka Hub', url),
       ]),
     );
 
     await ctx.reply(
       'Кнопка также в меню бота.',
-      Markup.keyboard([Markup.button.webApp('lyshka-service', url)])
+      Markup.keyboard([Markup.button.webApp('Lyshka Hub', url)])
         .resize()
         .persistent(),
     );
@@ -61,7 +61,7 @@ export class BotUpdate {
 
     const allowed = await this.appsService.hasAccess(from.id, 'meds');
     if (!allowed) {
-      await ctx.reply('Нет доступа к lyshka-service.');
+      await ctx.reply('Нет доступа к Lyshka Hub.');
       return;
     }
 
@@ -86,7 +86,7 @@ export class BotUpdate {
     await ctx.reply(['Сейчас нужно принять:', '', ...lines].join('\n'), {
       ...(url
         ? Markup.inlineKeyboard([
-            Markup.button.webApp('Открыть lyshka-service', url),
+            Markup.button.webApp('Открыть Lyshka Hub', url),
           ])
         : {}),
     });

@@ -271,7 +271,7 @@ export class StatsService {
         {
           headers: {
             Accept: 'application/json',
-            'User-Agent': 'Mozilla/5.0 (compatible; lyshka-service/1.0)',
+            'User-Agent': 'Mozilla/5.0 (compatible; LyshkaHub/1.0)',
           },
         },
       );

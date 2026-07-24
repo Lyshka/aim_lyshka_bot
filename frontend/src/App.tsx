@@ -80,7 +80,7 @@ function AppContent() {
         <div className="relative z-[1] mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center gap-3 px-6">
           <h1 className="font-display text-2xl font-semibold">Нет доступа</h1>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--tg-hint)' }}>
-            Открой lyshka-service через кнопку бота в Telegram.
+            Открой Lyshka Hub через кнопку бота в Telegram.
           </p>
           <p
             className="rounded-2xl px-4 py-3 text-sm"

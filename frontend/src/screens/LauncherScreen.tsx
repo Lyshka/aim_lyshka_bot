@@ -20,7 +20,7 @@ export function LauncherScreen({ onOpen }: LauncherScreenProps) {
             backdropFilter: 'blur(8px)',
           }}
         >
-          lyshka-service
+          Lyshka Hub
         </div>
         <h1 className="font-display mt-5 text-[2.35rem] leading-[1.05] font-semibold tracking-tight">
           Приложения

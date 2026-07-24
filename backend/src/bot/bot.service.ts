@@ -80,7 +80,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       await this.bot.telegram.setChatMenuButton({
         menuButton: {
           type: 'web_app',
-          text: 'lyshka-service',
+          text: 'Lyshka Hub',
           web_app: { url: target },
         },
       });

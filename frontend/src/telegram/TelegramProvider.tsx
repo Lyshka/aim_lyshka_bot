@@ -106,7 +106,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       if (!data) {
         if (alive) {
           setError(
-            'Приложение открыто не из Telegram. Нажми кнопку бота «Открыть lyshka-service».',
+            'Приложение открыто не из Telegram. Нажми кнопку бота «Открыть Lyshka Hub».',
           );
           setReady(true);
         }
