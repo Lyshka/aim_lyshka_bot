@@ -77,8 +77,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
   const [addingUrlsTo, setAddingUrlsTo] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState('');
-  const [itemUrl, setItemUrl] = useState('');
-  const [itemUrlTitle, setItemUrlTitle] = useState('');
+  const [itemNote, setItemNote] = useState('');
   const [extraUrl, setExtraUrl] = useState('');
   const [extraUrlTitle, setExtraUrlTitle] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -191,30 +190,15 @@ export function LinksApp({ onBack }: LinksAppProps) {
       setError('Укажи название');
       return;
     }
-    const url = itemUrl.trim();
-    if (url) {
-      try {
-        new URL(normalizeUrl(url));
-      } catch {
-        setError('Некорректная ссылка');
-        return;
-      }
-    }
     haptic('medium');
     setItemTitle('');
-    setItemUrl('');
-    setItemUrlTitle('');
+    setItemNote('');
     setAddingItemFor(null);
     await runOverview(() =>
       api.studyCreateItem(initData, {
         sectionId,
         title,
-        ...(url
-          ? {
-              url,
-              urlTitle: itemUrlTitle.trim() || undefined,
-            }
-          : {}),
+        note: itemNote.trim() || undefined,
       }),
     );
   }
@@ -317,10 +301,8 @@ export function LinksApp({ onBack }: LinksAppProps) {
           setAddingUrlsTo={setAddingUrlsTo}
           itemTitle={itemTitle}
           setItemTitle={setItemTitle}
-          itemUrl={itemUrl}
-          setItemUrl={setItemUrl}
-          itemUrlTitle={itemUrlTitle}
-          setItemUrlTitle={setItemUrlTitle}
+          itemNote={itemNote}
+          setItemNote={setItemNote}
           extraUrl={extraUrl}
           setExtraUrl={setExtraUrl}
           extraUrlTitle={extraUrlTitle}
@@ -387,10 +369,8 @@ function ListTab({
   setAddingUrlsTo,
   itemTitle,
   setItemTitle,
-  itemUrl,
-  setItemUrl,
-  itemUrlTitle,
-  setItemUrlTitle,
+  itemNote,
+  setItemNote,
   extraUrl,
   setExtraUrl,
   extraUrlTitle,
@@ -420,10 +400,8 @@ function ListTab({
   setAddingUrlsTo: (value: string | null) => void;
   itemTitle: string;
   setItemTitle: (value: string) => void;
-  itemUrl: string;
-  setItemUrl: (value: string) => void;
-  itemUrlTitle: string;
-  setItemUrlTitle: (value: string) => void;
+  itemNote: string;
+  setItemNote: (value: string) => void;
   extraUrl: string;
   setExtraUrl: (value: string) => void;
   extraUrlTitle: string;
@@ -590,7 +568,7 @@ function ListTab({
                   <div className="space-y-2 border-t border-black/5 px-4 py-3">
                     {section.items.length === 0 ? (
                       <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>
-                        Пока нет тем. Добавь название и ссылки к нему.
+                        Пока нет тем. Добавь название — ссылки можно будет потом.
                       </p>
                     ) : (
                       section.items.map((item) => (
@@ -755,16 +733,9 @@ function ListTab({
                           style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
                         <input
-                          value={itemUrl}
-                          onChange={(e) => setItemUrl(e.target.value)}
-                          placeholder="Ссылка (необязательно)"
-                          className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
-                        />
-                        <input
-                          value={itemUrlTitle}
-                          onChange={(e) => setItemUrlTitle(e.target.value)}
-                          placeholder="Название ссылки (необязательно)"
+                          value={itemNote}
+                          onChange={(e) => setItemNote(e.target.value)}
+                          placeholder="Объяснение (необязательно)"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
@@ -786,8 +757,7 @@ function ListTab({
                             onClick={() => {
                               setAddingItemFor(null);
                               setItemTitle('');
-                              setItemUrl('');
-                              setItemUrlTitle('');
+                              setItemNote('');
                             }}
                             className="rounded-xl px-3 py-2 text-sm"
                             style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
