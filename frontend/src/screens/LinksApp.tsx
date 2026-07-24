@@ -65,6 +65,112 @@ function formatDeletedAt(value: string | null) {
   }).format(new Date(value));
 }
 
+function IconBtn({
+  disabled,
+  onClick,
+  label,
+  tone = 'neutral',
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  label: string;
+  tone?: 'neutral' | 'danger';
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl disabled:opacity-50"
+      style={
+        tone === 'danger'
+          ? {
+              background:
+                'color-mix(in srgb, var(--app-danger) 12%, var(--app-surface))',
+              color: 'var(--app-danger)',
+              boxShadow:
+                'inset 0 0 0 1px color-mix(in srgb, var(--app-danger) 22%, transparent)',
+            }
+          : {
+              background:
+                'color-mix(in srgb, var(--app-surface-muted) 45%, var(--app-surface))',
+              color: 'var(--tg-text)',
+              boxShadow: 'inset 0 0 0 1px var(--app-border)',
+            }
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 20h4.2L19.1 9.1a1.8 1.8 0 0 0 0-2.5l-1.7-1.7a1.8 1.8 0 0 0-2.5 0L4 15.8V20Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.5 6.5 17.5 10.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 7h14"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 7.5 8.7 18.2A1.7 1.7 0 0 0 10.4 19.8h3.2a1.7 1.7 0 0 0 1.7-1.6L16 7.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 7 17 17"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function LinksApp({ onBack }: LinksAppProps) {
   const { initData, haptic, isAdmin } = useTelegram();
   const [tab, setTab] = useState<Tab>('list');
@@ -675,10 +781,10 @@ function ListTab({
                                     </p>
                                   ) : null}
                                 </div>
-                                <div className="flex shrink-0 flex-col gap-1">
-                                  <button
-                                    type="button"
+                                <div className="flex shrink-0 items-center gap-1.5">
+                                  <IconBtn
                                     disabled={busy}
+                                    label="Изменить"
                                     onClick={() => {
                                       haptic('light');
                                       setEditingItemId(item.id);
@@ -687,28 +793,17 @@ function ListTab({
                                       setItemTitle(item.title);
                                       setItemNote(item.note ?? '');
                                     }}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-medium"
-                                    style={{
-                                      background:
-                                        'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))',
-                                      boxShadow: 'inset 0 0 0 1px var(--app-border)',
-                                    }}
                                   >
-                                    Изменить
-                                  </button>
-                                  <button
-                                    type="button"
+                                    <PencilIcon />
+                                  </IconBtn>
+                                  <IconBtn
                                     disabled={busy}
+                                    label="Удалить"
+                                    tone="danger"
                                     onClick={() => onRemoveItem(item)}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-medium"
-                                    style={{
-                                      background:
-                                        'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
-                                      color: 'var(--app-danger)',
-                                    }}
                                   >
-                                    Удалить
-                                  </button>
+                                    <TrashIcon />
+                                  </IconBtn>
                                 </div>
                               </div>
                               <div className="mt-2 space-y-1.5">
@@ -739,19 +834,14 @@ function ListTab({
                                       >
                                         {linkLabel(entry)}
                                       </button>
-                                      <button
-                                        type="button"
+                                      <IconBtn
                                         disabled={busy}
+                                        label="Удалить ссылку"
+                                        tone="danger"
                                         onClick={() => onRemoveUrl(entry)}
-                                        className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
-                                        style={{
-                                          background:
-                                            'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
-                                          color: 'var(--app-danger)',
-                                        }}
                                       >
-                                        ×
-                                      </button>
+                                        <CloseIcon />
+                                      </IconBtn>
                                     </div>
                                   ))
                                 )}
