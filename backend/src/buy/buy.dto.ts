@@ -93,6 +93,10 @@ export class BuyUpdateItemDto extends BuyInitDto {
   @IsString()
   @MaxLength(2000)
   productUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  clearImage?: string;
 }
 
 export class BuyItemIdDto extends BuyInitDto {

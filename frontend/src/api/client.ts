@@ -736,6 +736,7 @@ export const api = {
       note?: string;
       productUrl?: string;
       image?: File | null;
+      clearImage?: boolean;
     },
   ) => {
     const body = new FormData();
@@ -749,6 +750,9 @@ export const api = {
     }
     if (data.productUrl !== undefined) {
       body.set('productUrl', data.productUrl);
+    }
+    if (data.clearImage) {
+      body.set('clearImage', 'true');
     }
     if (data.image) {
       body.set('image', data.image);

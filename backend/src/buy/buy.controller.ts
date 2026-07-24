@@ -145,6 +145,11 @@ export class BuyController {
       note: dto.note,
       productUrl: dto.productUrl,
       imageFilename: file?.filename,
+      clearImage:
+        !file?.filename &&
+        (dto.clearImage === '1' ||
+          dto.clearImage === 'true' ||
+          dto.clearImage === 'yes'),
     });
   }
 

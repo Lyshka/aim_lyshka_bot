@@ -72,6 +72,9 @@ export function BuyApp({ onBack }: BuyAppProps) {
   const [itemProductUrl, setItemProductUrl] = useState('');
   const [itemImage, setItemImage] = useState<File | null>(null);
   const [itemImagePreview, setItemImagePreview] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState('');
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [listTab, setListTab] = useState<'items' | 'add' | 'more'>('items');
 
   const tabs = useMemo(
@@ -113,6 +116,9 @@ export function BuyApp({ onBack }: BuyAppProps) {
     setItemNote('');
     setItemProductUrl('');
     setItemImage(null);
+    setEditingItemId(null);
+    setExistingImageUrl('');
+    setImageRemoved(false);
     setItemImagePreview((prev) => {
       if (prev) {
         URL.revokeObjectURL(prev);
@@ -129,6 +135,34 @@ export function BuyApp({ onBack }: BuyAppProps) {
       return file ? URL.createObjectURL(file) : '';
     });
     setItemImage(file);
+    if (file) {
+      setImageRemoved(false);
+    }
+  }
+
+  function handleClearImage() {
+    handlePickImage(null);
+    if (existingImageUrl) {
+      setImageRemoved(true);
+    }
+  }
+
+  function startEditItem(item: BuyListItem) {
+    setEditingItemId(item.id);
+    setItemTitle(item.title);
+    setItemNote(item.note);
+    setItemProductUrl(item.productUrl);
+    setExistingImageUrl(item.imageUrl);
+    setImageRemoved(false);
+    setItemImage(null);
+    setItemImagePreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return '';
+    });
+    setListTab('add');
+    setError(null);
   }
 
   async function runAction(action: () => Promise<BuyOverview>) {
@@ -192,6 +226,23 @@ export function BuyApp({ onBack }: BuyAppProps) {
       setError('Укажи название');
       return;
     }
+
+    if (editingItemId) {
+      await runAction(() =>
+        api.buyUpdateItem(initData, {
+          itemId: editingItemId,
+          title,
+          note: itemNote.trim(),
+          productUrl: normalizeUrl(itemProductUrl),
+          image: itemImage,
+          clearImage: imageRemoved && !itemImage,
+        }),
+      );
+      clearItemForm();
+      setListTab('items');
+      return;
+    }
+
     await runAction(() =>
       api.buyAddItem(initData, {
         listId: activeList.id,
@@ -204,6 +255,10 @@ export function BuyApp({ onBack }: BuyAppProps) {
     clearItemForm();
     setListTab('items');
   }
+
+  const formImagePreview =
+    itemImagePreview ||
+    (!imageRemoved && existingImageUrl ? mediaUrl(existingImageUrl) : '');
 
   if (error && !data) {
     return (
@@ -246,7 +301,8 @@ export function BuyApp({ onBack }: BuyAppProps) {
         itemTitle={itemTitle}
         itemNote={itemNote}
         itemProductUrl={itemProductUrl}
-        itemImagePreview={itemImagePreview}
+        itemImagePreview={formImagePreview}
+        editingItemId={editingItemId}
         onBack={() => {
           setActiveListId(null);
           setListTab('items');
@@ -256,8 +312,13 @@ export function BuyApp({ onBack }: BuyAppProps) {
         onSetItemNote={setItemNote}
         onSetItemProductUrl={setItemProductUrl}
         onPickImage={handlePickImage}
-        onClearImage={() => handlePickImage(null)}
+        onClearImage={handleClearImage}
+        onCancelEdit={() => {
+          clearItemForm();
+          setListTab('items');
+        }}
         onAddItem={() => void handleAddItem()}
+        onEditItem={startEditItem}
         onCopyCode={async () => {
           if (!activeList.shareCode) {
             return;
@@ -469,13 +530,16 @@ function ListScreen({
   itemNote,
   itemProductUrl,
   itemImagePreview,
+  editingItemId,
   onBack,
   onSetItemTitle,
   onSetItemNote,
   onSetItemProductUrl,
   onPickImage,
   onClearImage,
+  onCancelEdit,
   onAddItem,
+  onEditItem,
   onCopyCode,
   onEnableSharing,
   onRemoveMember,
@@ -494,13 +558,16 @@ function ListScreen({
   itemNote: string;
   itemProductUrl: string;
   itemImagePreview: string;
+  editingItemId: string | null;
   onBack: () => void;
   onSetItemTitle: (value: string) => void;
   onSetItemNote: (value: string) => void;
   onSetItemProductUrl: (value: string) => void;
   onPickImage: (file: File | null) => void;
   onClearImage: () => void;
+  onCancelEdit: () => void;
   onAddItem: () => void;
+  onEditItem: (item: BuyListItem) => void;
   onCopyCode: () => Promise<void>;
   onEnableSharing: () => void;
   onRemoveMember: (memberUserId: number) => void;
@@ -514,7 +581,7 @@ function ListScreen({
   const guests = list.members.filter((member) => member.role === 'member');
   const listTabs = [
     { id: 'items' as const, label: 'Список' },
-    { id: 'add' as const, label: 'Добавить' },
+    { id: 'add' as const, label: editingItemId ? 'Изменить' : 'Добавить' },
     { id: 'more' as const, label: 'Ещё' },
   ];
 
@@ -579,6 +646,7 @@ function ListScreen({
               userId={userId}
               busy={busy}
               onToggle={() => onToggle(item.id)}
+              onEdit={() => onEditItem(item)}
               onDelete={() => onDeleteItem(item.id)}
             />
           ))}
@@ -597,6 +665,7 @@ function ListScreen({
               userId={userId}
               busy={busy}
               onToggle={() => onToggle(item.id)}
+              onEdit={() => onEditItem(item)}
               onDelete={() => onDeleteItem(item.id)}
             />
           ))}
@@ -605,6 +674,9 @@ function ListScreen({
 
       {tab === 'add' ? (
         <div className="mt-4 app-surface rounded-2xl px-4 py-4 space-y-2">
+          <p className="text-sm font-medium">
+            {editingItemId ? 'Редактирование' : 'Новый товар'}
+          </p>
           <input
             value={itemTitle}
             onChange={(event) => onSetItemTitle(event.target.value)}
@@ -686,8 +758,19 @@ function ListScreen({
               color: 'var(--tg-button-text)',
             }}
           >
-            Добавить в список
+            {editingItemId ? 'Сохранить' : 'Добавить в список'}
           </button>
+          {editingItemId ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onCancelEdit}
+              className="w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-50"
+              style={{ color: 'var(--tg-hint)' }}
+            >
+              Отмена
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -816,12 +899,14 @@ function ItemCard({
   userId,
   busy,
   onToggle,
+  onEdit,
   onDelete,
 }: {
   item: BuyListItem;
   userId: number;
   busy: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const image = mediaUrl(item.imageUrl);
@@ -880,7 +965,7 @@ function ItemCard({
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy}
@@ -893,7 +978,19 @@ function ItemCard({
             color: item.purchased ? 'var(--tg-hint)' : 'var(--app-link)',
           }}
         >
-          {item.purchased ? 'Вернуть' : 'Купили'}
+          {item.purchased ? 'Вернуть в список' : 'Отметить купленным'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onEdit}
+          className="rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
+          style={{
+            background: 'color-mix(in srgb, var(--tg-button) 12%, transparent)',
+            color: 'var(--tg-button)',
+          }}
+        >
+          Изменить
         </button>
         <button
           type="button"
