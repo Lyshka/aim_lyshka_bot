@@ -297,7 +297,7 @@ export class StudyService {
         userId,
         sectionId: section.id,
         title,
-        note: (data.note ?? '').trim(),
+        note: (data.note ?? '').trim().slice(0, 2000),
         sortOrder: (last?.sortOrder ?? -1) + 1,
         ...(link
           ? {
@@ -312,6 +312,33 @@ export class StudyService {
               },
             }
           : {}),
+      },
+    });
+
+    return this.overview(userId);
+  }
+
+  async updateItem(
+    userId: number,
+    data: { itemId: string; title: string; note?: string },
+  ) {
+    const item = await this.prisma.studyItem.findFirst({
+      where: { id: data.itemId, userId, deletedAt: null },
+    });
+    if (!item) {
+      throw new NotFoundException('Тема не найдена');
+    }
+
+    const title = data.title.trim();
+    if (!title) {
+      throw new BadRequestException('Нужно название');
+    }
+
+    await this.prisma.studyItem.update({
+      where: { id: item.id },
+      data: {
+        title,
+        note: (data.note ?? '').trim().slice(0, 2000),
       },
     });
 

@@ -58,7 +58,23 @@ export class StudyCreateItemDto extends StudyInitDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(300)
+  @MaxLength(2000)
+  note?: string;
+}
+
+export class StudyUpdateItemDto extends StudyInitDto {
+  @IsString()
+  @MinLength(1)
+  itemId!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  title!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
   note?: string;
 }
 

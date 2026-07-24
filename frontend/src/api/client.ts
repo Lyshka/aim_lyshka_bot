@@ -608,6 +608,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ initData, ...data }),
     }),
+  studyUpdateItem: (
+    initData: string,
+    data: { itemId: string; title: string; note?: string },
+  ) =>
+    request<StudyOverview>('/api/study/items/update', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...data }),
+    }),
   studyAddUrls: (
     initData: string,
     data: { itemId: string; url: string; title?: string },

@@ -11,6 +11,7 @@ import {
   StudyRestoreItemDto,
   StudyRestoreSectionDto,
   StudyRestoreUrlDto,
+  StudyUpdateItemDto,
   StudyUpdateSectionDto,
 } from './study.dto';
 import { StudyService } from './study.service';
@@ -91,6 +92,19 @@ export class StudyController {
       title: dto.title,
       url: dto.url,
       urlTitle: dto.urlTitle,
+      note: dto.note,
+    });
+  }
+
+  @Post('items/update')
+  async updateItem(@Body() dto: StudyUpdateItemDto) {
+    const session = await this.authService.authenticateApp(
+      dto.initData ?? '',
+      'links',
+    );
+    return this.studyService.updateItem(session.user.id, {
+      itemId: dto.itemId,
+      title: dto.title,
       note: dto.note,
     });
   }

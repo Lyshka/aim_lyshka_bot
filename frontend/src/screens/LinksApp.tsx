@@ -76,6 +76,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [addingItemFor, setAddingItemFor] = useState<string | null>(null);
   const [addingUrlsTo, setAddingUrlsTo] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState('');
   const [itemNote, setItemNote] = useState('');
   const [extraUrl, setExtraUrl] = useState('');
@@ -203,6 +204,25 @@ export function LinksApp({ onBack }: LinksAppProps) {
     );
   }
 
+  async function updateItem(itemId: string) {
+    const title = itemTitle.trim();
+    if (!title) {
+      setError('Укажи название');
+      return;
+    }
+    haptic('medium');
+    setItemTitle('');
+    setItemNote('');
+    setEditingItemId(null);
+    await runOverview(() =>
+      api.studyUpdateItem(initData, {
+        itemId,
+        title,
+        note: itemNote.trim() || undefined,
+      }),
+    );
+  }
+
   async function addUrlsToItem(itemId: string) {
     const url = extraUrl.trim();
     if (!url) {
@@ -233,6 +253,11 @@ export function LinksApp({ onBack }: LinksAppProps) {
     await runOverview(() => api.studyDeleteItem(initData, item.id));
     if (addingUrlsTo === item.id) {
       setAddingUrlsTo(null);
+    }
+    if (editingItemId === item.id) {
+      setEditingItemId(null);
+      setItemTitle('');
+      setItemNote('');
     }
   }
 
@@ -299,6 +324,8 @@ export function LinksApp({ onBack }: LinksAppProps) {
           setAddingItemFor={setAddingItemFor}
           addingUrlsTo={addingUrlsTo}
           setAddingUrlsTo={setAddingUrlsTo}
+          editingItemId={editingItemId}
+          setEditingItemId={setEditingItemId}
           itemTitle={itemTitle}
           setItemTitle={setItemTitle}
           itemNote={itemNote}
@@ -316,6 +343,7 @@ export function LinksApp({ onBack }: LinksAppProps) {
           onRenameSection={(section) => void renameSection(section)}
           onRemoveSection={(section) => void removeSection(section)}
           onCreateItem={(sectionId) => void createItem(sectionId)}
+          onUpdateItem={(itemId) => void updateItem(itemId)}
           onAddUrls={(itemId) => void addUrlsToItem(itemId)}
           onRemoveItem={(item) => void removeItem(item)}
           onRemoveUrl={(entry) => void removeUrl(entry)}
@@ -367,6 +395,8 @@ function ListTab({
   setAddingItemFor,
   addingUrlsTo,
   setAddingUrlsTo,
+  editingItemId,
+  setEditingItemId,
   itemTitle,
   setItemTitle,
   itemNote,
@@ -384,6 +414,7 @@ function ListTab({
   onRenameSection,
   onRemoveSection,
   onCreateItem,
+  onUpdateItem,
   onAddUrls,
   onRemoveItem,
   onRemoveUrl,
@@ -398,6 +429,8 @@ function ListTab({
   setAddingItemFor: (value: string | null) => void;
   addingUrlsTo: string | null;
   setAddingUrlsTo: (value: string | null) => void;
+  editingItemId: string | null;
+  setEditingItemId: (value: string | null) => void;
   itemTitle: string;
   setItemTitle: (value: string) => void;
   itemNote: string;
@@ -415,6 +448,7 @@ function ListTab({
   onRenameSection: (section: StudySection) => void;
   onRemoveSection: (section: StudySection) => void;
   onCreateItem: (sectionId: string) => void;
+  onUpdateItem: (itemId: string) => void;
   onAddUrls: (itemId: string) => void;
   onRemoveItem: (item: StudyItem) => void;
   onRemoveUrl: (entry: StudyItemUrl) => void;
@@ -430,7 +464,7 @@ function ListTab({
         <input
           value={sectionTitle}
           onChange={(e) => setSectionTitle(e.target.value)}
-          placeholder="Новый раздел, например DevOps"
+          placeholder="Новый раздел, например Рецепты"
           className="w-full rounded-xl border-0 px-3 py-2.5 text-sm outline-none"
           style={{ background: 'var(--app-surface)', color: 'var(--tg-text)' }}
           onKeyDown={(e) => {
@@ -577,117 +611,46 @@ function ListTab({
                           className="rounded-2xl px-3 py-3"
                           style={{ background: 'var(--app-surface)' }}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold">
-                                {item.title}
-                              </p>
-                              {item.note ? (
-                                <p
-                                  className="mt-0.5 text-xs"
-                                  style={{ color: 'var(--tg-hint)' }}
-                                >
-                                  {item.note}
-                                </p>
-                              ) : null}
-                            </div>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => onRemoveItem(item)}
-                              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium"
-                              style={{
-                                background:
-                                  'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
-                                color: 'var(--app-danger)',
-                              }}
-                            >
-                              Удалить тему
-                            </button>
-                          </div>
-                          <div className="mt-2 space-y-1.5">
-                            {item.urls.length === 0 ? (
-                              <p
-                                className="text-xs"
-                                style={{ color: 'var(--tg-hint)' }}
-                              >
-                                Ссылок пока нет
-                              </p>
-                            ) : (
-                              item.urls.map((entry) => (
-                                <div
-                                  key={entry.id}
-                                  className="flex items-center gap-1.5"
-                                >
-                                  <button
-                                    type="button"
-                                    className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
-                                    style={{
-                                      background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
-                                      color: 'var(--app-link)',
-                                    }}
-                                    onClick={() => {
-                                      haptic('light');
-                                      openUrl(entry.url);
-                                    }}
-                                  >
-                                    {linkLabel(entry)}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() => onRemoveUrl(entry)}
-                                    className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
-                                    style={{
-                                      background:
-                                        'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
-                                      color: 'var(--app-danger)',
-                                    }}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))
-                            )}
-                          </div>
-
-                          {addingUrlsTo === item.id ? (
-                            <div className="mt-2 space-y-2">
+                          {editingItemId === item.id ? (
+                            <div className="space-y-2">
                               <input
-                                value={extraUrl}
-                                onChange={(e) => setExtraUrl(e.target.value)}
-                                placeholder="https://example.com"
+                                value={itemTitle}
+                                onChange={(e) => setItemTitle(e.target.value)}
+                                placeholder="Название темы"
                                 className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                                 style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                               />
-                              <input
-                                value={extraUrlTitle}
-                                onChange={(e) =>
-                                  setExtraUrlTitle(e.target.value)
-                                }
-                                placeholder="Название ссылки (необязательно)"
-                                className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                                style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
+                              <textarea
+                                value={itemNote}
+                                onChange={(e) => setItemNote(e.target.value)}
+                                placeholder="Объяснение (необязательно)"
+                                rows={5}
+                                className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                style={{
+                                  minHeight: '7.5rem',
+                                  background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))',
+                                  boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                }}
                               />
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  disabled={busy || !extraUrl.trim()}
-                                  onClick={() => onAddUrls(item.id)}
+                                  disabled={busy || !itemTitle.trim()}
+                                  onClick={() => onUpdateItem(item.id)}
                                   className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
                                   style={{
                                     background: '#65a30d',
                                     color: '#f7fee7',
                                   }}
                                 >
-                                  Добавить
+                                  Сохранить
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setAddingUrlsTo(null);
-                                    setExtraUrl('');
-                                    setExtraUrlTitle('');
+                                    setEditingItemId(null);
+                                    setItemTitle('');
+                                    setItemNote('');
                                   }}
                                   className="rounded-xl px-3 py-2 text-sm"
                                   style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
@@ -697,24 +660,170 @@ function ListTab({
                               </div>
                             </div>
                           ) : (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => {
-                                haptic('light');
-                                setAddingUrlsTo(item.id);
-                                setAddingItemFor(null);
-                                setExtraUrl('');
-                                setExtraUrlTitle('');
-                              }}
-                              className="mt-2 w-full rounded-xl px-3 py-2 text-xs font-semibold"
-                              style={{
-                                background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
-                                color: 'var(--app-link)',
-                              }}
-                            >
-                              + Ссылка
-                            </button>
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold">
+                                    {item.title}
+                                  </p>
+                                  {item.note ? (
+                                    <p
+                                      className="mt-0.5 whitespace-pre-wrap text-xs"
+                                      style={{ color: 'var(--tg-hint)' }}
+                                    >
+                                      {item.note}
+                                    </p>
+                                  ) : null}
+                                </div>
+                                <div className="flex shrink-0 flex-col gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      haptic('light');
+                                      setEditingItemId(item.id);
+                                      setAddingItemFor(null);
+                                      setAddingUrlsTo(null);
+                                      setItemTitle(item.title);
+                                      setItemNote(item.note ?? '');
+                                    }}
+                                    className="rounded-lg px-2 py-1 text-[11px] font-medium"
+                                    style={{
+                                      background:
+                                        'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))',
+                                      boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                    }}
+                                  >
+                                    Изменить
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => onRemoveItem(item)}
+                                    className="rounded-lg px-2 py-1 text-[11px] font-medium"
+                                    style={{
+                                      background:
+                                        'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
+                                      color: 'var(--app-danger)',
+                                    }}
+                                  >
+                                    Удалить
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="mt-2 space-y-1.5">
+                                {item.urls.length === 0 ? (
+                                  <p
+                                    className="text-xs"
+                                    style={{ color: 'var(--tg-hint)' }}
+                                  >
+                                    Ссылок пока нет
+                                  </p>
+                                ) : (
+                                  item.urls.map((entry) => (
+                                    <div
+                                      key={entry.id}
+                                      className="flex items-center gap-1.5"
+                                    >
+                                      <button
+                                        type="button"
+                                        className="min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-left text-xs font-medium"
+                                        style={{
+                                          background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                          color: 'var(--app-link)',
+                                        }}
+                                        onClick={() => {
+                                          haptic('light');
+                                          openUrl(entry.url);
+                                        }}
+                                      >
+                                        {linkLabel(entry)}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => onRemoveUrl(entry)}
+                                        className="shrink-0 rounded-lg px-2 py-2 text-[11px] font-medium"
+                                        style={{
+                                          background:
+                                            'color-mix(in srgb, var(--app-danger) 10%, var(--tg-secondary))',
+                                          color: 'var(--app-danger)',
+                                        }}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+
+                              {addingUrlsTo === item.id ? (
+                                <div className="mt-2 space-y-2">
+                                  <input
+                                    value={extraUrl}
+                                    onChange={(e) => setExtraUrl(e.target.value)}
+                                    placeholder="https://example.com"
+                                    className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                    style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
+                                  />
+                                  <input
+                                    value={extraUrlTitle}
+                                    onChange={(e) =>
+                                      setExtraUrlTitle(e.target.value)
+                                    }
+                                    placeholder="Название ссылки (необязательно)"
+                                    className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                                    style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={busy || !extraUrl.trim()}
+                                      onClick={() => onAddUrls(item.id)}
+                                      className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                                      style={{
+                                        background: '#65a30d',
+                                        color: '#f7fee7',
+                                      }}
+                                    >
+                                      Добавить
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setAddingUrlsTo(null);
+                                        setExtraUrl('');
+                                        setExtraUrlTitle('');
+                                      }}
+                                      className="rounded-xl px-3 py-2 text-sm"
+                                      style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
+                                    >
+                                      Отмена
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    haptic('light');
+                                    setAddingUrlsTo(item.id);
+                                    setAddingItemFor(null);
+                                    setEditingItemId(null);
+                                    setExtraUrl('');
+                                    setExtraUrlTitle('');
+                                  }}
+                                  className="mt-2 w-full rounded-xl px-3 py-2 text-xs font-semibold"
+                                  style={{
+                                    background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                                    color: 'var(--app-link)',
+                                  }}
+                                >
+                                  + Ссылка
+                                </button>
+                              )}
+                            </>
                           )}
                         </article>
                       ))
@@ -728,16 +837,21 @@ function ListTab({
                         <input
                           value={itemTitle}
                           onChange={(e) => setItemTitle(e.target.value)}
-                          placeholder="Название темы, например Docker"
+                          placeholder="Название темы, например Борщ"
                           className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
                           style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
                         />
-                        <input
+                        <textarea
                           value={itemNote}
                           onChange={(e) => setItemNote(e.target.value)}
                           placeholder="Объяснение (необязательно)"
-                          className="w-full rounded-xl border-0 px-3 py-2 text-sm outline-none"
-                          style={{ background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))', boxShadow: 'inset 0 0 0 1px var(--app-border)' }}
+                          rows={5}
+                          className="w-full resize-y rounded-xl border-0 px-3 py-2 text-sm outline-none"
+                          style={{
+                            minHeight: '7.5rem',
+                            background: 'color-mix(in srgb, var(--app-surface-muted) 50%, var(--app-surface))',
+                            boxShadow: 'inset 0 0 0 1px var(--app-border)',
+                          }}
                         />
                         <div className="flex gap-2">
                           <button
@@ -775,6 +889,9 @@ function ListTab({
                           setAddingItemFor(section.id);
                           setOpenSectionId(section.id);
                           setAddingUrlsTo(null);
+                          setEditingItemId(null);
+                          setItemTitle('');
+                          setItemNote('');
                           setExtraUrl('');
                           setExtraUrlTitle('');
                         }}
